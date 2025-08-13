@@ -7,6 +7,8 @@ using System.Windows;
 using System.Windows.Input;
 using Amazon.EC2;
 using Amazon.EC2.Model;
+using Amazon.RDS.Model;
+using Amazon.RDS;
 using Amazon.Runtime;
 using Amazon.SimpleSystemsManagement;
 using Amazon.SimpleSystemsManagement.Model;
@@ -120,14 +122,70 @@ namespace AwsManager.ViewModels
             }
         }
 
-        private void StartInstance(object? parameter)
+        private async void StartInstance(object? parameter)
         {
-            MessageBox.Show($"This action would start instance: {SelectedInstance?.InstanceId}", "Action: Start", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (SelectedInstance == null) return;
+
+            try
+            {
+                IsLoading = true;
+                using var EC2Client = new AmazonEC2Client();
+
+                var request = new StartInstancesRequest
+                {
+                    InstanceIds = [SelectedInstance.InstanceId]
+                };
+                
+
+                await EC2Client.StartInstancesAsync(request);
+
+                MessageBox.Show($"DB instance {SelectedInstance.InstanceId} is starting...", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                // Refresh the instances list to show updated status
+                await LoadInstancesAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to start DB instance {SelectedInstance.InstanceId}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+
         }
 
-        private void StopInstance(object? parameter)
+        private async void StopInstance(object? parameter)
         {
-            MessageBox.Show($"This action would stop instance: {SelectedInstance?.InstanceId}", "Action: Stop", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (SelectedInstance == null) return;
+
+            try
+            {
+                IsLoading = true;
+                using var EC2Client = new AmazonEC2Client();
+
+                var request = new StopInstancesRequest
+                {
+                    InstanceIds = [SelectedInstance.InstanceId]
+                };
+
+
+                await EC2Client.StopInstancesAsync(request);
+
+                MessageBox.Show($"DB instance {SelectedInstance.InstanceId} is stopping...", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                // Refresh the instances list to show updated status
+                await LoadInstancesAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to stop DB instance {SelectedInstance.InstanceId}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+
         }
 
         private void Disconnect(object? parameter)
