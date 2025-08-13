@@ -13,7 +13,7 @@ namespace AwsManager.ViewModels
 {
     public class AutoScalingViewModel : ViewModelBase, IRefreshableViewModel
     {
-        public string Name => "Auto Scaling";
+        public static string Name => "Auto Scaling";
 
         private bool _isLoading;
         public bool IsLoading
@@ -52,7 +52,7 @@ namespace AwsManager.ViewModels
 
         public AutoScalingViewModel()
         {
-            AutoScalingGroups = new ObservableCollection<AutoScalingGroupModel>();
+            AutoScalingGroups = [];
             RefreshCommand = new RelayCommand(async _ => await LoadGroupsAsync(), _ => !IsLoading);
             UpdateGroupCommand = new RelayCommand(async _ => await UpdateGroupAsync(), _ => SelectedGroup != null && !IsLoading);
 
@@ -76,8 +76,8 @@ namespace AwsManager.ViewModels
                         MinSize = asg.MinSize ?? 0,
                         MaxSize = asg.MaxSize ?? 0,
                         DesiredCapacity = asg.DesiredCapacity ?? 0,
-                        AvailabilityZones = asg.AvailabilityZones ?? new List<string>(),
-                        Instances = asg.Instances?.Select(i => i.InstanceId).ToList() ?? new List<string>(),
+                        AvailabilityZones = asg.AvailabilityZones ?? [],
+                        Instances = asg.Instances?.Select(i => i.InstanceId).ToList() ?? [],
                         LaunchConfigurationName = asg.LaunchConfigurationName ?? "",
                         Status = asg.Status ?? ""
                     });

@@ -19,8 +19,8 @@ namespace AwsManager.ViewModels
 
         public InstanceDetailsViewModel(Ec2InstanceModel instance)
         {
-            if (instance == null) throw new ArgumentNullException(nameof(instance));
-            InstanceProperties = new ObservableCollection<KeyValuePair<string, string>>();
+            ArgumentNullException.ThrowIfNull(instance);
+            InstanceProperties = [];
             _ = LoadDetailsAsync(instance.InstanceId);
         }
 
@@ -31,7 +31,7 @@ namespace AwsManager.ViewModels
                 using var ec2Client = new AmazonEC2Client();
                 var response = await ec2Client.DescribeInstancesAsync(new DescribeInstancesRequest
                 {
-                    InstanceIds = new List<string> { instanceId }
+                    InstanceIds = [instanceId]
                 });
 
                 var fullInstanceDetails = response.Reservations.FirstOrDefault()?.Instances.FirstOrDefault();

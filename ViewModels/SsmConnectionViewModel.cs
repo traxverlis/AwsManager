@@ -45,7 +45,7 @@ namespace AwsManager.ViewModels
 
             //_rdpLocalPort = new Random().Next(50000, 60000);
             _rdpLocalPort = FindFreePort(13389);
-            CustomRules = new ObservableCollection<PortForwardingRule>();
+            CustomRules = [];
             AddRuleCommand = new RelayCommand(_ => CustomRules.Add(new PortForwardingRule()));
             RemoveRuleCommand = new RelayCommand(param => { if (param is PortForwardingRule rule) CustomRules.Remove(rule); }, _ => CustomRules.Count > 0);
 

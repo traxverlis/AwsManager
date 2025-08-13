@@ -15,7 +15,7 @@ namespace AwsManager.Services
 
         private SessionTrackingService()
         {
-            ActiveSessions = new ObservableCollection<TrackedSessionModel>();
+            ActiveSessions = [];
         }
 
         public void AddSession(Process process, string description)

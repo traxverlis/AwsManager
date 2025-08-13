@@ -26,8 +26,8 @@ namespace AwsManager.ViewModels
         public TagEditorViewModel(string instanceId)
         {
             InstanceId = instanceId;
-            Tags = new ObservableCollection<TagModel>();
-            _originalTags = new List<TagModel>();
+            Tags = [];
+            _originalTags = [];
 
             AddTagCommand = new RelayCommand(_ => Tags.Add(new TagModel { Key = "New-Key", Value = "New-Value" }));
             RemoveTagCommand = new RelayCommand(param => { if (param is TagModel tag) Tags.Remove(tag); });
@@ -43,10 +43,10 @@ namespace AwsManager.ViewModels
                 using var ec2Client = new AmazonEC2Client();
                 var response = await ec2Client.DescribeTagsAsync(new DescribeTagsRequest
                 {
-                    Filters = new List<Filter>
-            {
-                new Filter("resource-id", new List<string> { InstanceId })
-            }
+                    Filters =
+            [
+                new Filter("resource-id", [InstanceId])
+            ]
                 });
 
                 Tags.Clear();
@@ -86,23 +86,23 @@ namespace AwsManager.ViewModels
 
                 // Find tags to delete
                 var tagsToDelete = _originalTags.Where(orig => !Tags.Any(curr => curr.Key == orig.Key)).ToList();
-                if (tagsToDelete.Any())
+                if (tagsToDelete.Count != 0)
                 {
                     var deleteRequest = new DeleteTagsRequest
                     {
-                        Resources = { InstanceId },
-                        Tags = tagsToDelete.Select(t => new Tag { Key = t.Key, Value = t.Value }).ToList()
+                        Resources = [InstanceId],
+                        Tags = [.. tagsToDelete.Select(t => new Tag { Key = t.Key, Value = t.Value })]
                     };
                     await ec2Client.DeleteTagsAsync(deleteRequest);
                 }
 
                 // Find tags to create or update
                 var tagsToCreate = Tags.Select(t => new Tag { Key = t.Key, Value = t.Value }).ToList();
-                if (tagsToCreate.Any())
+                if (tagsToCreate.Count != 0)
                 {
                     var createRequest = new CreateTagsRequest
                     {
-                        Resources = new List<string> { InstanceId },
+                        Resources = [InstanceId],
                         Tags = tagsToCreate
                     };
                     await ec2Client.CreateTagsAsync(createRequest);

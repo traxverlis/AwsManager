@@ -7,7 +7,7 @@ namespace AwsManager.Services
 {
     public class SsmService
     {
-        private string GetProfileArgument()
+        private static string GetProfileArgument()
         {
             var profile = Environment.GetEnvironmentVariable("AWS_PROFILE");
             return string.IsNullOrEmpty(profile) ? "" : $"--profile {profile}";
@@ -29,7 +29,7 @@ namespace AwsManager.Services
             LaunchAwsCliProcess(arguments, description);
         }
 
-        private void LaunchAwsCliProcess(string arguments, string description)
+        private static void LaunchAwsCliProcess(string arguments, string description)
         {
             try
             {

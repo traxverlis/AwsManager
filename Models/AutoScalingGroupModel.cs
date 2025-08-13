@@ -8,9 +8,9 @@ namespace AwsManager.Models
         public int MinSize { get; set; }
         public int MaxSize { get; set; }
         public int DesiredCapacity { get; set; }
-        public List<string> AvailabilityZones { get; set; } = new List<string>();
+        public List<string> AvailabilityZones { get; set; } = [];
         public int InstanceCount => Instances.Count;
-        public List<string> Instances { get; set; } = new List<string>();
+        public List<string> Instances { get; set; } = [];
         public string LaunchConfigurationName { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
     }

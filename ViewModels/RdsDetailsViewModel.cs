@@ -20,7 +20,7 @@ namespace AwsManager.ViewModels
         public RdsDetailsViewModel(RdsInstanceModel instance)
         {
             if (instance == null) throw new ArgumentNullException(nameof(instance));
-            InstanceProperties = new ObservableCollection<KeyValuePair<string, string>>();
+            InstanceProperties = [];
             _ = LoadDetailsAsync(instance.DbInstanceIdentifier);
         }
 

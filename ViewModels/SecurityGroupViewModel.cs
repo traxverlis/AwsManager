@@ -12,7 +12,7 @@ namespace AwsManager.ViewModels
 {
     public class SecurityGroupViewModel : ViewModelBase, IRefreshableViewModel
     {
-        public string Name => "Security Groups";
+        public static string Name => "Security Groups";
 
         private bool _isLoading;
         public bool IsLoading
@@ -35,7 +35,7 @@ namespace AwsManager.ViewModels
 
         public SecurityGroupViewModel()
         {
-            SecurityGroups = new ObservableCollection<SecurityGroupModel>();
+            SecurityGroups = [];
             RefreshCommand = new RelayCommand(async _ => await LoadSecurityGroupsAsync(), _ => !IsLoading);
             AddRuleCommand = new RelayCommand(AddRule, _ => SelectedSecurityGroup != null);
             DeleteRuleCommand = new RelayCommand(DeleteRule, _ => SelectedSecurityGroup != null);
@@ -76,7 +76,7 @@ namespace AwsManager.ViewModels
                                      (p.Ipv4Ranges ?? Enumerable.Empty<IpRange>()).Select(r => r.CidrIp)
                                      .Concat((p.UserIdGroupPairs ?? Enumerable.Empty<UserIdGroupPair>()).Select(g => g.GroupId))
                                  ),
-                                 Description = (p.Ipv4Ranges != null && p.Ipv4Ranges.Any())
+                                 Description = (p.Ipv4Ranges != null && p.Ipv4Ranges.Count != 0)
                                      ? p.Ipv4Ranges.First().Description ?? ""
                                      : ""
                              })
@@ -98,7 +98,7 @@ namespace AwsManager.ViewModels
                                 (p.Ipv4Ranges ?? Enumerable.Empty<IpRange>()).Select(r => r.CidrIp)
                                 .Concat((p.UserIdGroupPairs ?? Enumerable.Empty<UserIdGroupPair>()).Select(g => g.GroupId))
                             ),
-                            Description = (p.Ipv4Ranges != null && p.Ipv4Ranges.Any())
+                            Description = (p.Ipv4Ranges != null && p.Ipv4Ranges.Count != 0)
                                 ? p.Ipv4Ranges.First().Description ?? ""
                                 : ""
                         })

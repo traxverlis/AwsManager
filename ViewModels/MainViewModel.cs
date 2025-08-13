@@ -45,15 +45,15 @@ namespace AwsManager.ViewModels
 
         public MainViewModel()
         {
-            AwsProfiles = new ObservableCollection<string>();
+            AwsProfiles = [];
             LoadProfiles();
 
             QuitCommand = new RelayCommand(CloseApp, _ => true);
             HelpCommand = new RelayCommand(Help, _ => true);
 
 
-            ViewModels = new ObservableCollection<ViewModelBase>
-            {
+            ViewModels =
+            [
                 new Ec2ViewModel(),
                 new S3ViewModel(),
 
@@ -63,7 +63,7 @@ namespace AwsManager.ViewModels
 
                 new Route53ViewModel(),
                 //new LiveSessionsViewModel()
-            };
+            ];
 
             var initialVm = ViewModels.FirstOrDefault();
             if (initialVm != null)
@@ -103,13 +103,7 @@ namespace AwsManager.ViewModels
         private void CloseApp(object? parameter)
         {
             // Ferme l'application comme si appui sur la croix de la fenêtre
-            if (App.Current.MainWindow != null)
-            {
-                App.Current.MainWindow.Close();
-
-
-
-            }
+            App.Current.MainWindow?.Close();
         }
 
         private void Help(object? parameter)

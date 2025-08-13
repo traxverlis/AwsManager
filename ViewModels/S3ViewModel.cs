@@ -18,7 +18,7 @@ namespace AwsManager.ViewModels
 {
     public class S3ViewModel : ViewModelBase, IRefreshableViewModel
     {
-        public string Name => "S3 Buckets";
+        public static string Name => "S3 Buckets";
 
         private bool _isLoading;
         public bool IsLoading
@@ -54,7 +54,7 @@ namespace AwsManager.ViewModels
 
         public S3ViewModel()
         {
-            Items = new ObservableCollection<S3ItemModel>();
+            Items = [];
             RefreshCommand = new RelayCommand(async _ => await LoadBucketsAsync(), _ => !IsLoading);
             OpenItemCommand = new RelayCommand(async item => await OpenItemAsync(item), _ => !IsLoading);
             DownloadFileCommand = new RelayCommand(async _ => await DownloadFileAsync(), _ => SelectedFile != null && SelectedFile.ItemType == "File");

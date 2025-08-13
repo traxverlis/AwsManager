@@ -18,7 +18,7 @@ namespace AwsManager.ViewModels
 {
     public class Ec2ViewModel : ViewModelBase, IRefreshableViewModel
     {
-        public string Name => "EC2 Instances";
+        public static string Name => "EC2 Instances";
         private bool _isLoading;
         public bool IsLoading
         {
@@ -45,7 +45,7 @@ namespace AwsManager.ViewModels
 
         public Ec2ViewModel()
         {
-            Instances = new ObservableCollection<Ec2InstanceModel>();
+            Instances = [];
             RefreshCommand = new RelayCommand(async _ => await LoadInstancesAsync(), _ => !IsLoading);
             StartInstanceCommand = new RelayCommand(StartInstance, _ => SelectedInstance != null);
             StopInstanceCommand = new RelayCommand(StopInstance, _ => SelectedInstance != null);
@@ -183,7 +183,7 @@ namespace AwsManager.ViewModels
 
             connectionWindow.ShowDialog();
         }
-                private async Task ReloginSsoAsync(string profileName)
+                private static async Task ReloginSsoAsync(string profileName)
         {
             try
             {
@@ -224,10 +224,7 @@ namespace AwsManager.ViewModels
         private readonly Predicate<object?>? _canExecute;
 
         public RelayCommand(Action<object?> execute, Predicate<object?>? canExecute = null)
-        {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute;
-        }
+            => (_execute, _canExecute) = (execute ?? throw new ArgumentNullException(nameof(execute)), canExecute);
 
         public bool CanExecute(object? parameter)
         {

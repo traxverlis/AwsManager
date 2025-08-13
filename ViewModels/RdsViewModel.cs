@@ -12,7 +12,7 @@ namespace AwsManager.ViewModels
 {
     public class RdsViewModel : ViewModelBase, IRefreshableViewModel
     {
-        public string Name => "RDS Instances";
+        public static string Name => "RDS Instances";
 
         private bool _isLoading;
         public bool IsLoading
@@ -38,7 +38,7 @@ namespace AwsManager.ViewModels
 
         public RdsViewModel()
         {
-            Instances = new ObservableCollection<RdsInstanceModel>();
+            Instances = [];
             RefreshCommand = new RelayCommand(async _ => await LoadInstancesAsync(), _ => !IsLoading);
             StartDbInstanceCommand = new RelayCommand(StartDbInstance, _ => SelectedInstance != null);
             StopDbInstanceCommand = new RelayCommand(StopDbInstance, _ => SelectedInstance != null);

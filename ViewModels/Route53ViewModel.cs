@@ -15,7 +15,7 @@ namespace AwsManager.ViewModels
 {
     public class Route53ViewModel : ViewModelBase, IRefreshableViewModel
     {
-        public string Name => "Route 53";
+        public static string Name => "Route 53";
 
         private bool _isLoading;
         public bool IsLoading { get => _isLoading; set => SetField(ref _isLoading, value); }
@@ -49,8 +49,8 @@ namespace AwsManager.ViewModels
 
         public Route53ViewModel()
         {
-            HostedZones = new ObservableCollection<HostedZoneModel>();
-            ResourceRecordSets = new ObservableCollection<ResourceRecordSetModel>();
+            HostedZones = [];
+            ResourceRecordSets = [];
 
             RefreshCommand = new RelayCommand(async _ => await LoadHostedZonesAsync(), _ => !IsLoading);
             CreateRecordCommand = new RelayCommand(async _ => await CreateRecordAsync(), _ => SelectedHostedZone != null && !IsLoading);
@@ -95,12 +95,12 @@ namespace AwsManager.ViewModels
                 var paginator = r53Client.Paginators.ListResourceRecordSets(new ListResourceRecordSetsRequest { HostedZoneId = SelectedHostedZone.Id });
                 await foreach (var record in paginator.ResourceRecordSets)
                 {
-                    List<string> values = new List<string>();
+                    List<string> values = [];
 
                     if (record.ResourceRecords != null && record.ResourceRecords.Count > 0)
                     {
                         // Cas standard : enregistrement classique
-                        values = record.ResourceRecords.Select(r => r.Value).ToList();
+                        values = [.. record.ResourceRecords.Select(r => r.Value)];
                     }
                     else if (record.AliasTarget != null && !string.IsNullOrWhiteSpace(record.AliasTarget.DNSName))
                     {
@@ -133,11 +133,10 @@ namespace AwsManager.ViewModels
                     Name = vm.Name,
                     Type = vm.Type,
                     TTL = vm.Ttl,
-                    ResourceRecords = vm.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                                             .Select(v => new ResourceRecord { Value = v }).ToList()
+                    ResourceRecords = [.. vm.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(v => new ResourceRecord { Value = v })]
                 };
                 var change = new Change(ChangeAction.CREATE, newRecord);
-                await ExecuteChangeBatchAsync(new List<Change> { change });
+                await ExecuteChangeBatchAsync([change]);
             }
         }
 
@@ -155,7 +154,7 @@ namespace AwsManager.ViewModels
                     Name = vm.OriginalRecord.Name,
                     Type = vm.OriginalRecord.Type,
                     TTL = vm.OriginalRecord.TTL,
-                    ResourceRecords = vm.OriginalRecord.ResourceRecords.Select(v => new ResourceRecord { Value = v }).ToList()
+                    ResourceRecords = [.. vm.OriginalRecord.ResourceRecords.Select(v => new ResourceRecord { Value = v })]
                 };
 
                 var newRecord = new ResourceRecordSet
@@ -163,14 +162,13 @@ namespace AwsManager.ViewModels
                     Name = vm.Name,
                     Type = vm.Type,
                     TTL = vm.Ttl,
-                    ResourceRecords = vm.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                                             .Select(v => new ResourceRecord { Value = v }).ToList()
+                    ResourceRecords = [.. vm.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(v => new ResourceRecord { Value = v })]
                 };
 
                 var deleteChange = new Change(ChangeAction.DELETE, oldRecord);
                 var createChange = new Change(ChangeAction.CREATE, newRecord);
 
-                await ExecuteChangeBatchAsync(new List<Change> { deleteChange, createChange });
+                await ExecuteChangeBatchAsync([deleteChange, createChange]);
             }
         }
 
@@ -185,10 +183,10 @@ namespace AwsManager.ViewModels
                     Name = SelectedRecordSet.Name,
                     Type = SelectedRecordSet.Type,
                     TTL = SelectedRecordSet.TTL,
-                    ResourceRecords = SelectedRecordSet.ResourceRecords.Select(v => new ResourceRecord { Value = v }).ToList()
+                    ResourceRecords = [.. SelectedRecordSet.ResourceRecords.Select(v => new ResourceRecord { Value = v })]
                 };
                 var change = new Change(ChangeAction.DELETE, recordToDelete);
-                await ExecuteChangeBatchAsync(new List<Change> { change });
+                await ExecuteChangeBatchAsync([change]);
             }
         }
 

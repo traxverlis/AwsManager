@@ -8,7 +8,7 @@ namespace AwsManager.Models
         public string GroupName { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string VpcId { get; set; } = string.Empty;
-        public List<SecurityGroupRuleModel> IngressRules { get; set; } = new List<SecurityGroupRuleModel>();
-        public List<SecurityGroupRuleModel> EgressRules { get; set; } = new List<SecurityGroupRuleModel>();
+        public List<SecurityGroupRuleModel> IngressRules { get; set; } = [];
+        public List<SecurityGroupRuleModel> EgressRules { get; set; } = [];
     }
 }

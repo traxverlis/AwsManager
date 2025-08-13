@@ -17,7 +17,7 @@ namespace AwsManager.ViewModels
 {
     public class RdsTagEditorViewModel : ViewModelBase
     {
-        private string _dbInstanceIdentifier;
+        private readonly string _dbInstanceIdentifier;
         private string _resourceArn = string.Empty;
         private readonly List<TagModel> _originalTags;
 
@@ -31,8 +31,8 @@ namespace AwsManager.ViewModels
         public RdsTagEditorViewModel(string dbInstanceIdentifier)
         {
             _dbInstanceIdentifier = dbInstanceIdentifier;
-            Tags = new ObservableCollection<TagModel>();
-            _originalTags = new List<TagModel>();
+            Tags = [];
+            _originalTags = [];
 
             AddTagCommand = new RelayCommand(_ => Tags.Add(new TagModel { Key = "New-Key", Value = "New-Value" }));
             RemoveTagCommand = new RelayCommand(param => { if (param is TagModel tag) Tags.Remove(tag); });
@@ -81,7 +81,7 @@ namespace AwsManager.ViewModels
                 using var rdsClient = new AmazonRDSClient();
 
                 var tagsToRemove = _originalTags.Where(orig => !Tags.Any(curr => curr.Key == orig.Key)).Select(t => t.Key).ToList();
-                if (tagsToRemove.Any())
+                if (tagsToRemove.Count != 0)
                 {
                     await rdsClient.RemoveTagsFromResourceAsync(new RemoveTagsFromResourceRequest
                     {
@@ -91,7 +91,7 @@ namespace AwsManager.ViewModels
                 }
 
                 var tagsToAddOrUpdate = Tags.Select(t => new Amazon.RDS.Model.Tag { Key = t.Key, Value = t.Value }).ToList();
-                if (tagsToAddOrUpdate.Any())
+                if (tagsToAddOrUpdate.Count != 0)
                 {
                     await rdsClient.AddTagsToResourceAsync(new AddTagsToResourceRequest
                     {

@@ -9,9 +9,9 @@ namespace AwsManager.ViewModels
 {
     public class LiveSessionsViewModel : ViewModelBase, IRefreshableViewModel
     {
-        public string Name => "Live Sessions";
+        public static string Name => "Live Sessions";
 
-        public ObservableCollection<TrackedSessionModel> ActiveSessions => SessionTrackingService.Instance.ActiveSessions;
+        public static ObservableCollection<TrackedSessionModel> ActiveSessions => SessionTrackingService.Instance.ActiveSessions;
 
         private TrackedSessionModel? _selectedSession;
         public TrackedSessionModel? SelectedSession

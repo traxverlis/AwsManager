@@ -11,7 +11,7 @@ namespace AwsManager.ViewModels
         public long Ttl { get; set; }
         public string Value { get; set; } // A single string for simplicity, for multiple values use newline
 
-        public List<string> RecordTypes { get; } = new List<string> { "A", "AAAA", "CNAME", "MX", "NS", "PTR", "SOA", "SPF", "SRV", "TXT" };
+        public List<string> RecordTypes { get; } = ["A", "AAAA", "CNAME", "MX", "NS", "PTR", "SOA", "SPF", "SRV", "TXT"];
         public ResourceRecordSetModel OriginalRecord { get; }
 
         public EditRecordSetViewModel(ResourceRecordSetModel? recordToEdit = null)
