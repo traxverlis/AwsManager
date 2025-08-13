@@ -7,7 +7,25 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <PackageIcon>aws.png</PackageIcon>
+    <ApplicationIcon>amazon_aws_logo_icon_145507.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="aws.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="amazon_aws_logo_icon_145507.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="aws.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.Core" Version="4.0.0.21" />
     <PackageReference Include="AWSSDK.EC2" Version="4.0.27" />
@@ -32,5 +50,24 @@
       <TreatAsUsed>true</TreatAsUsed>
     </PackageReference>
 
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="aws.ico">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 </Project>
