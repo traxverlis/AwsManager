@@ -7,11 +7,8 @@ using System.Windows;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
-using Amazon.EC2;
-using Amazon.EC2.Model;
-using AwsManager.Models;
+
 
 namespace AwsManager.ViewModels
 {
@@ -85,6 +82,7 @@ namespace AwsManager.ViewModels
             try
             {
                 using var ec2Client = new AmazonEC2Client();
+
 
                 // Find tags to delete
                 var tagsToDelete = _originalTags.Where(orig => !Tags.Any(curr => curr.Key == orig.Key)).ToList();

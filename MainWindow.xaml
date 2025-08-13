@@ -63,8 +63,27 @@
                      SelectedItem="{Binding SelectedAwsProfile}"
                      materialDesign:HintAssist.Hint="Select AWS Profile"
                      Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+            <Grid DockPanel.Dock="Bottom"
+      Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="170"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-           <ListBox ItemsSource="{Binding ViewModels}"
+                <Button Content="Quitter"
+            Grid.Column="0"
+            Margin="0,0,5,0"
+            Style="{StaticResource MaterialDesignRaisedButton}"
+            Command="{Binding QuitCommand}"/>
+
+                <Button Content="?"
+            Grid.Column="1"
+            Margin="5,0,0,0"
+            Style="{StaticResource MaterialDesignRaisedButton}"
+            Command="{Binding HelpCommand}"/>
+            </Grid>
+
+            <ListBox ItemsSource="{Binding ViewModels}"
                     SelectedItem="{Binding CurrentViewModel}"
                     Style="{StaticResource MaterialDesignNavigationListBox}">
                <ListBox.ItemTemplate>

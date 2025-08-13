@@ -7,6 +7,9 @@
     <Compile Update="Views\Dialogs\EditRecordSetWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\Dialogs\HelpWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Views\Dialogs\InstanceDetailsWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
