@@ -1,0 +1,101 @@
+<UserControl x:Class="AwsManager.Views.AutoScalingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:viewmodels="clr-namespace:AwsManager.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=viewmodels:AutoScalingViewModel, IsDesignTimeCreatable=True}"
+             d:DesignHeight="600"
+        d:DesignWidth="1000">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal"
+                Margin="5">
+            <Button Content="Refresh"
+                    Command="{Binding RefreshCommand}"/>
+            <TextBlock Text="Loading..."
+                    VerticalAlignment="Center"
+                    Margin="10,0"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        </StackPanel>
+
+        <DataGrid Grid.Row="1"
+                ItemsSource="{Binding AutoScalingGroups}"
+                SelectedItem="{Binding SelectedGroup}"
+                  AutoGenerateColumns="False"
+                IsReadOnly="True"
+                CanUserAddRows="False"
+                  Style="{StaticResource MaterialDesignDataGrid}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name"
+                        Binding="{Binding AutoScalingGroupName}"
+                        Width="*"/>
+                <DataGridTextColumn Header="Min"
+                        Binding="{Binding MinSize}"/>
+                <DataGridTextColumn Header="Max"
+                        Binding="{Binding MaxSize}"/>
+                <DataGridTextColumn Header="Desired"
+                        Binding="{Binding DesiredCapacity}"/>
+                <DataGridTextColumn Header="Instances"
+                        Binding="{Binding InstanceCount}"/>
+                <DataGridTextColumn Header="Status"
+                        Binding="{Binding Status}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <materialDesign:Card Grid.Row="2"
+                Margin="5"
+                Padding="10">
+            <materialDesign:Card.Style>
+                <Style TargetType="materialDesign:Card"
+                        BasedOn="{StaticResource {x:Type materialDesign:Card}}">
+                    <Setter Property="Visibility"
+                            Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SelectedGroup}"
+                                Value="{x:Null}">
+                            <Setter Property="Visibility"
+                                    Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </materialDesign:Card.Style>
+            <StackPanel>
+                <TextBlock Text="Edit Selected Group"
+                        Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                        Margin="0,0,0,10"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBox Text="{Binding NewMinSize, UpdateSourceTrigger=PropertyChanged}"
+                            materialDesign:HintAssist.Hint="Min Size"
+                            Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                            Margin="5"
+                            Width="80"/>
+                    <TextBox Text="{Binding NewMaxSize, UpdateSourceTrigger=PropertyChanged}"
+                            materialDesign:HintAssist.Hint="Max Size"
+                            Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                            Margin="5"
+                            Width="80"/>
+                    <TextBox Text="{Binding NewDesiredCapacity, UpdateSourceTrigger=PropertyChanged}"
+                            materialDesign:HintAssist.Hint="Desired"
+                            Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                            Margin="5"
+                            Width="80"/>
+                    <Button Content="Update"
+                            Command="{Binding UpdateGroupCommand}"
+                            Margin="10,0"
+                            VerticalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
+        </materialDesign:Card>
+    </Grid>
+</UserControl>

@@ -1,0 +1,85 @@
+﻿<Window x:Class="AwsManager.MainWindow"
+       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+       xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+       xmlns:viewModels="clr-namespace:AwsManager.ViewModels"
+       xmlns:views="clr-namespace:AwsManager.Views"
+       mc:Ignorable="d"
+       Title="AWS Manager"
+       Height="720"
+       Width="1280"
+       TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+       Background="{DynamicResource MaterialDesignPaper}"
+       TextElement.FontWeight="Regular"
+       TextElement.FontSize="13"
+       FontFamily="{materialDesign:MaterialDesignFont}">
+
+   <Window.Resources>
+       <!-- Ensure that the ViewModel and View classes exist in the specified namespaces -->
+       <DataTemplate DataType="{x:Type viewModels:Ec2ViewModel}">
+           <views:Ec2View/>
+       </DataTemplate>
+       <DataTemplate DataType="{x:Type viewModels:S3ViewModel}">
+           <views:S3View/>
+       </DataTemplate>
+       <DataTemplate DataType="{x:Type viewModels:RdsViewModel}">
+           <views:RdsView/>
+       </DataTemplate>
+       <DataTemplate DataType="{x:Type viewModels:AutoScalingViewModel}">
+           <views:AutoScalingView/>
+       </DataTemplate>
+       <DataTemplate DataType="{x:Type viewModels:SecurityGroupViewModel}">
+           <views:SecurityGroupView/>
+       </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:Route53ViewModel}">
+            <views:Route53View/>
+        </DataTemplate>
+        <!--<DataTemplate DataType="{x:Type viewModels:LiveSessionsViewModel}" >
+            <views:LiveSessionsView/>
+        </DataTemplate>-->
+    </Window.Resources>
+
+   <Grid>
+       <Grid.ColumnDefinitions>
+           <ColumnDefinition Width="240"/>
+           <ColumnDefinition Width="*"/>
+       </Grid.ColumnDefinitions>
+
+       <!-- Navigation Rail -->
+       <DockPanel Grid.Column="0"
+                  Background="{DynamicResource MaterialDesignDivider}">
+           <TextBlock Text="AWS Manager"
+                      FontSize="22"
+                      FontWeight="Bold"
+                      Margin="10"
+                      DockPanel.Dock="Top"
+                      HorizontalAlignment="Center"/>
+
+           <ComboBox DockPanel.Dock="Top"
+                     Margin="10"
+                     ItemsSource="{Binding AwsProfiles}"
+                     SelectedItem="{Binding SelectedAwsProfile}"
+                     materialDesign:HintAssist.Hint="Select AWS Profile"
+                     Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+
+           <ListBox ItemsSource="{Binding ViewModels}"
+                    SelectedItem="{Binding CurrentViewModel}"
+                    Style="{StaticResource MaterialDesignNavigationListBox}">
+               <ListBox.ItemTemplate>
+                   <DataTemplate>
+                       <TextBlock Text="{Binding Name}"
+                                  Margin="10"
+                                  FontSize="16"/>
+                   </DataTemplate>
+               </ListBox.ItemTemplate>
+           </ListBox>
+       </DockPanel>
+
+       <!-- Main Content -->
+       <ContentControl Grid.Column="1"
+                       Content="{Binding CurrentViewModel}"
+                       Margin="10"/>
+   </Grid>
+</Window>

@@ -1,0 +1,70 @@
+<UserControl x:Class="AwsManager.Views.RdsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:viewmodels="clr-namespace:AwsManager.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=viewmodels:RdsViewModel, IsDesignTimeCreatable=True}"
+             d:DesignHeight="600"
+        d:DesignWidth="1000">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal"
+                Margin="5">
+            <Button Content="Refresh"
+                    Command="{Binding RefreshCommand}"/>
+            <Button Content="Start"
+                    Command="{Binding StartDbInstanceCommand}"
+                    Margin="5,0,0,0"/>
+            <Button Content="Stop"
+                    Command="{Binding StopDbInstanceCommand}"
+                    Margin="5,0,0,0"/>
+            <Button Content="Create Snapshot"
+                    Command="{Binding CreateDbSnapshotCommand}"
+                    Margin="5,0,0,0"/>
+            <Button Content="Edit Tags" Command="{Binding EditTagsCommand}" Margin="5,0,0,0"/>
+            <Button Content="View Full Description" Command="{Binding ViewDetailsCommand}" Margin="5,0,0,0"/>
+            <TextBlock Text="Loading..."
+                    VerticalAlignment="Center"
+                    Margin="10,0"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        </StackPanel>
+
+        <DataGrid Grid.Row="1"
+                ItemsSource="{Binding Instances}"
+                SelectedItem="{Binding SelectedInstance}"
+                  AutoGenerateColumns="False"
+                IsReadOnly="True"
+                CanUserAddRows="False"
+                  Style="{StaticResource MaterialDesignDataGrid}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Identifier"
+                        Binding="{Binding DbInstanceIdentifier}"/>
+                <DataGridTextColumn Header="Class"
+                        Binding="{Binding DbInstanceClass}"/>
+                <DataGridTextColumn Header="Engine"
+                        Binding="{Binding Engine}"/>
+                <DataGridTextColumn Header="Status"
+                        Binding="{Binding DbInstanceStatus}"/>
+                <DataGridTextColumn Header="Endpoint"
+                        Binding="{Binding EndpointAddress}"
+                        Width="*"/>
+                <DataGridTextColumn Header="Storage (GB)"
+                        Binding="{Binding AllocatedStorage}"/>
+                <DataGridCheckBoxColumn Header="Multi-AZ"
+                        Binding="{Binding MultiAZ}"/>
+                <DataGridTextColumn Header="Security Groups"
+                        Binding="{Binding SecurityGroups}"
+                        Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

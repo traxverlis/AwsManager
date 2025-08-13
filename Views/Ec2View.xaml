@@ -1,0 +1,72 @@
+<UserControl x:Class="AwsManager.Views.Ec2View"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:viewmodels="clr-namespace:AwsManager.ViewModels"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=viewmodels:Ec2ViewModel, IsDesignTimeCreatable=True}"
+             d:DesignHeight="600" d:DesignWidth="1000">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Bandeau des actions -->
+        <Grid Grid.Row="0" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <!-- Boutons gauche -->
+                <ColumnDefinition Width="*"/>
+                <!-- Espace flexible -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- Bouton droite -->
+            </Grid.ColumnDefinitions>
+
+
+            <StackPanel Orientation="Horizontal" Grid.Column="0">
+                <Button Content="Refresh" Command="{Binding RefreshCommand}" />
+                <Button Content="Start" Command="{Binding StartInstanceCommand}" Margin="5,0,0,0"/>
+                <Button Content="Stop" Command="{Binding StopInstanceCommand}" Margin="5,0,0,0"/>
+                <Button Content="Connect via SSM" Command="{Binding ConnectCommand}" Margin="5,0,0,0"/>
+                <Button Content="Edit Tags" Command="{Binding EditTagsCommand}" Margin="5,0,0,0"/>
+                <Button Content="View Full Description" Command="{Binding ViewDetailsCommand}" Margin="5,0,0,0"/>
+            </StackPanel>
+
+
+            <TextBlock Grid.Column="1"
+                       Text="Loading..."
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Center"
+                       Margin="10,0"
+                       Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+
+            <Button Grid.Column="2"
+                    Content="Close RDP Session"
+                    Command="{Binding DisconnectCommand}"
+                    Margin="0,0,0,0"/>
+        </Grid>
+
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Instances}" SelectedItem="{Binding SelectedInstance}"
+                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                  Style="{StaticResource MaterialDesignDataGrid}">
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" />
+                <DataGridTextColumn Header="Instance ID" Binding="{Binding InstanceId}" />
+                <DataGridTextColumn Header="Type" Binding="{Binding InstanceType}" />
+                <DataGridTextColumn Header="State" Binding="{Binding State}" />
+                <DataGridTextColumn Header="Public IP" Binding="{Binding PublicIp}" />
+                <DataGridTextColumn Header="Private IP" Binding="{Binding PrivateIp}" />
+                <DataGridTextColumn Header="Plateform" Binding="{Binding Platform}" />
+                <DataGridCheckBoxColumn Header="SSM Managed" Binding="{Binding IsSsmManaged}" />
+                <DataGridTextColumn Header="Security Groups" Binding="{Binding SecurityGroups}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

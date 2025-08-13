@@ -1,0 +1,56 @@
+<UserControl x:Class="AwsManager.Views.S3View"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:viewmodels="clr-namespace:AwsManager.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=viewmodels:S3ViewModel, IsDesignTimeCreatable=True}"
+             d:DesignHeight="600"
+        d:DesignWidth="1000">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal"
+                Margin="5">
+            <Button Content="Go to Root"
+                    Command="{Binding RefreshCommand}"/>
+            <Button Content="Download Selected" Command="{Binding DownloadFileCommand}" Margin="5,0,0,0"/>
+            <Button Content="Delete Selected" Command="{Binding DeleteFileCommand}" Margin="5,0,0,0"/>
+            <Button Content="Upload File" Command="{Binding UploadFileCommand}" Margin="5,0,0,0"/>
+            <TextBlock Text="{Binding CurrentPath}"
+                    VerticalAlignment="Center"
+                    Margin="10,0"
+                    FontWeight="Bold"/>
+        </StackPanel>
+
+        <ListView Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedFile}" IsEnabled="{Binding !IsLoading}">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="MouseDoubleClick">
+                    <i:InvokeCommandAction Command="{Binding OpenItemCommand}"
+                            CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ListView}}"/>
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="Type"
+                            DisplayMemberBinding="{Binding ItemType}"
+                            Width="100"/>
+                    <GridViewColumn Header="Name"
+                            DisplayMemberBinding="{Binding Name}"
+                            Width="300"/>
+                    <GridViewColumn Header="Size (Bytes)"
+                            DisplayMemberBinding="{Binding Size}"
+                            Width="120"/>
+                    <GridViewColumn Header="Last Modified"
+                            DisplayMemberBinding="{Binding LastModified, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                            Width="200"/>
+                </GridView>
+            </ListView.View>
+        </ListView>
+    </Grid>
+</UserControl>

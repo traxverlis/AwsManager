@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.Core" Version="4.0.0.21" />
+    <PackageReference Include="AWSSDK.EC2" Version="4.0.27" />
+    <PackageReference Include="AWSSDK.Route53" Version="4.0.2.5" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.6.4" />
+
+    <PackageReference Include="AWSSDK.RDS" Version="4.0.5.1" />
+    <PackageReference Include="AWSSDK.AutoScaling" Version="4.0.2.7" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="4.0.1.9" />
+    <PackageReference Include="AWSSDK.SimpleSystemsManagement" Version="4.0.2.7" />
+    <PackageReference Include="AWSSDK.SSO" Version="4.0.0.17" />
+    <PackageReference Include="AWSSDK.SSOOIDC" Version="4.0.0.17" />
+    <PackageReference Include="MaterialDesignThemes" Version="5.2.1" />
+    <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+
+  </ItemGroup>
+</Project>
