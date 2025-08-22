@@ -98,7 +98,7 @@ namespace AwsManager.ViewModels
                             PublicIp = instance.PublicIpAddress ?? "N/A",
                             PrivateIp = instance.PrivateIpAddress ?? "N/A",
                             IsSsmManaged = ssmInfo?.PingStatus == PingStatus.Online,
-                            SecurityGroups = instance.SecurityGroups != null && instance.SecurityGroups.Any()
+                            SecurityGroups = instance.SecurityGroups != null && instance.SecurityGroups.Count != 0
                                 ? string.Join(", ", instance.SecurityGroups.Select(sg => sg.GroupName))
                                 : "N/A",
                             Platform = instance.PlatformDetails?.ToString() ?? "N/A"

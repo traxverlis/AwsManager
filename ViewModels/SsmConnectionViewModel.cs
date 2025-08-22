@@ -74,13 +74,13 @@ namespace AwsManager.ViewModels
 
         private void StartSsh(object? parameter)
         {
-            _ssmService.StartSshSession(TargetInstance.InstanceId);
+            SsmService.StartSshSession(TargetInstance.InstanceId);
             MessageBox.Show($"SSH session process started for {TargetInstance.InstanceId}.\nCheck your terminal windows.", "Action: SSH", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void StartRdpTunnel(object? parameter)
         {
-            _ssmService.StartPortForwardingSession(TargetInstance.InstanceId, RdpRemotePort, RdpLocalPort);
+            SsmService.StartPortForwardingSession(TargetInstance.InstanceId, RdpRemotePort, RdpLocalPort);
             MessageBox.Show($"RDP tunnel process started for {TargetInstance.InstanceId}.\nRemote Port: {RdpRemotePort}\nLocal Port: {RdpLocalPort}\n\nYou can now connect your RDP client to localhost:{RdpLocalPort}", "Action: RDP Tunnel", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -88,7 +88,7 @@ namespace AwsManager.ViewModels
         {
             foreach (var rule in CustomRules)
             {
-                _ssmService.StartPortForwardingSession(TargetInstance.InstanceId, rule.RemotePort, rule.LocalPort);
+                SsmService.StartPortForwardingSession(TargetInstance.InstanceId, rule.RemotePort, rule.LocalPort);
             }
             MessageBox.Show($"{CustomRules.Count} custom tunnel process(es) started for {TargetInstance.InstanceId}", "Action: Custom Tunnel", MessageBoxButton.OK, MessageBoxImage.Information);
         }

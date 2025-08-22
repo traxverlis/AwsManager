@@ -13,23 +13,23 @@ namespace AwsManager.Services
             return string.IsNullOrEmpty(profile) ? "" : $"--profile {profile}";
         }
 
-        public void StartSshSession(string instanceId)
+        public static void StartSshSession(string instanceId)
         {
-            var description = $"SSH session to {instanceId}";
+            //var description = $"SSH session to {instanceId}";
             var arguments = $"ssm start-session --target {instanceId} {GetProfileArgument()}";
-            LaunchAwsCliProcess(arguments, description);
+            LaunchAwsCliProcess(arguments);
         }
 
-        public void StartPortForwardingSession(string instanceId, int remotePort, int localPort)
+        public static void StartPortForwardingSession(string instanceId, int remotePort, int localPort)
         {
             // The parameters value needs to be properly quoted for the command line.
-            var description = $"Port forward {instanceId} ({remotePort}:{localPort})";
+            //var description = $"Port forward {instanceId} ({remotePort}:{localPort})";
             var parameters = $"portNumber={remotePort},localPortNumber={localPort}";
             var arguments = $"ssm start-session --target {instanceId} --document-name AWS-StartPortForwardingSession --parameters \"{parameters}\" {GetProfileArgument()} ";
-            LaunchAwsCliProcess(arguments, description,false);
+            LaunchAwsCliProcess(arguments,false);
         }
 
-        private static void LaunchAwsCliProcess(string arguments, string description, bool windows =true)
+        private static void LaunchAwsCliProcess(string arguments, bool windows =true)
         {
             try
             {
@@ -42,6 +42,7 @@ namespace AwsManager.Services
                         UseShellExecute = windows, // true pour ouvrir une nouvelle fenêtre
                         CreateNoWindow = !windows, // false pour afficher la fenêtre
                         WindowStyle = ProcessWindowStyle.Normal
+                        
                     }
                 };
                 process.Start();

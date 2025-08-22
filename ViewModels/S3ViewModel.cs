@@ -114,8 +114,8 @@ namespace AwsManager.ViewModels
                 }
                 else
                 {
-                    _currentPrefix = _currentPrefix.TrimEnd('/').Substring(0, _currentPrefix.TrimEnd('/').LastIndexOf('/') + 1);
-                    if (_currentPrefix.EndsWith("/") && _currentPrefix.Length == 1) _currentPrefix = "";
+                    _currentPrefix = _currentPrefix.TrimEnd('/')[..(_currentPrefix.TrimEnd('/').LastIndexOf('/') + 1)];
+                    if (_currentPrefix.EndsWith('/') && _currentPrefix.Length == 1) _currentPrefix = "";
 
                     await LoadObjectsAsync();
                 }

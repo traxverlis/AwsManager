@@ -136,10 +136,10 @@ namespace AwsManager.ViewModels
                     var ipPermission = new IpPermission
                     {
                         IpProtocol = dialog.Protocol,
-                        Ipv4Ranges = new List<IpRange>
-                        {
+                        Ipv4Ranges =
+                        [
                             new IpRange { CidrIp = dialog.Cidr, Description = dialog.Description }
-                        }
+                        ]
                     };
 
                     if (dialog.PortRange.Equals("All", StringComparison.OrdinalIgnoreCase))
@@ -172,7 +172,7 @@ namespace AwsManager.ViewModels
                         var request = new AuthorizeSecurityGroupIngressRequest
                         {
                             GroupId = SelectedSecurityGroup.GroupId,
-                            IpPermissions = new List<IpPermission> { ipPermission }
+                            IpPermissions = [ipPermission]
                         };
                         await ec2Client.AuthorizeSecurityGroupIngressAsync(request);
                     }
@@ -181,7 +181,7 @@ namespace AwsManager.ViewModels
                         var request = new AuthorizeSecurityGroupEgressRequest
                         {
                             GroupId = SelectedSecurityGroup.GroupId,
-                            IpPermissions = new List<IpPermission> { ipPermission }
+                            IpPermissions = [ipPermission]
                         };
                         await ec2Client.AuthorizeSecurityGroupEgressAsync(request);
                     }
@@ -209,10 +209,10 @@ namespace AwsManager.ViewModels
                 var ipPermission = new IpPermission
                 {
                     IpProtocol = rule.Protocol,
-                    Ipv4Ranges = new List<IpRange>
-                    {
+                    Ipv4Ranges =
+                    [
                         new IpRange { CidrIp = rule.SourceOrDestination }
-                    }
+                    ]
                 };
 
                 if (rule.PortRange.Equals("All", StringComparison.OrdinalIgnoreCase))
@@ -240,7 +240,7 @@ namespace AwsManager.ViewModels
                     var request = new RevokeSecurityGroupIngressRequest
                     {
                         GroupId = SelectedSecurityGroup.GroupId,
-                        IpPermissions = new List<IpPermission> { ipPermission }
+                        IpPermissions = [ipPermission]
                     };
                     await ec2Client.RevokeSecurityGroupIngressAsync(request);
                 }
@@ -249,7 +249,7 @@ namespace AwsManager.ViewModels
                     var request = new RevokeSecurityGroupEgressRequest
                     {
                         GroupId = SelectedSecurityGroup.GroupId,
-                        IpPermissions = new List<IpPermission> { ipPermission }
+                        IpPermissions = [ipPermission]
                     };
                     await ec2Client.RevokeSecurityGroupEgressAsync(request);
                 }
