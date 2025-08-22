@@ -110,7 +110,7 @@ namespace AwsManager.ViewModels
         {
             // Ouvre la page d'aide avec un texte personnalisé
             var helpText = parameter as string ?? @"*******************************
-LICENCE LOGICIELLE : ""AWS Manager""
+LICENCE LOGICIELLE : ""AWS Manager"" by Julien Cosso
 *******************************
 
 **Préambule**  
@@ -159,7 +159,8 @@ La responsabilité des auteurs ne saurait être engagée en cas de :
 ---
 
 ### Article 6 – Acceptation
-En cliquant sur ""Accepter"", vous reconnaissez avoir lu et compris cette licence,  
+En cliquant sur ""Accepter"" ( il n'y a pas de bouton vous n'avez pas le choix)
+vous reconnaissez  avoir lu et compris cette licence,  
 et acceptez de respecter l’ensemble de ses termes, même les plus farfelus.  
 Vous reconnaissez également que ce texte est juridiquement contraignant…  
 dans un univers parallèle où les licornes exercent comme avocats.

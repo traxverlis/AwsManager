@@ -28,7 +28,7 @@
                     FontWeight="Bold"/>
         </StackPanel>
 
-        <ListView Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedFile}" IsEnabled="{Binding !IsLoading}">
+        <ListView Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedFile}" IsEnabled="{Binding IsNotLoading}">
             <i:Interaction.Triggers>
                 <i:EventTrigger EventName="MouseDoubleClick">
                     <i:InvokeCommandAction Command="{Binding OpenItemCommand}"

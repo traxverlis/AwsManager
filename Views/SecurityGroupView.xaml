@@ -1,4 +1,5 @@
 <UserControl x:Class="AwsManager.Views.SecurityGroupView"
+             x:Name="SecurityGroupViewControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -61,36 +62,77 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0"
-                        Text="Ingress Rules"
-                        Style="{StaticResource MaterialDesignHeadline6TextBlock}"
-                        Margin="5"/>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Ingress Rules"
+                               Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                               Margin="5"/>
+                    <Button Content="Add Rule" 
+                            Command="{Binding DataContext.AddRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Margin="10,0"
+                            VerticalAlignment="Center"/>
+                </StackPanel>
+
                 <DataGrid Grid.Row="1"
-                        ItemsSource="{Binding IngressRules}"
-                        AutoGenerateColumns="False"
-                        IsReadOnly="True">
+          ItemsSource="{Binding IngressRules}"
+          Tag="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"
+          AutoGenerateColumns="False"
+          IsReadOnly="True">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="Tag" 
+                Value="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"/>
+                            <Setter Property="ContextMenu">
+                                <Setter.Value>
+                                    <ContextMenu>
+                                        <MenuItem Header="Delete"
+                              Command="{Binding PlacementTarget.Tag.DeleteRuleCommand,
+                                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                              CommandParameter="{Binding}"/>
+                                    </ContextMenu>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+
+                    </DataGrid.RowStyle>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Protocol"
-                                Binding="{Binding Protocol}"/>
+                                            Binding="{Binding Protocol}"/>
                         <DataGridTextColumn Header="Port Range"
-                                Binding="{Binding PortRange}"/>
+                                            Binding="{Binding PortRange}"/>
                         <DataGridTextColumn Header="Source"
-                                Binding="{Binding SourceOrDestination}"
-                                Width="*"/>
+                                            Binding="{Binding SourceOrDestination}"
+                                            Width="*"/>
                         <DataGridTextColumn Header="Description"
-                                Binding="{Binding Description}"
-                                />
+                                            Binding="{Binding Description}"
+                                            />
                     </DataGrid.Columns>
                 </DataGrid>
 
                 <TextBlock Grid.Row="2"
-                        Text="Egress Rules"
-                        Style="{StaticResource MaterialDesignHeadline6TextBlock}"
-                        Margin="5"/>
+                           Text="Egress Rules"
+                           Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                           Margin="5"/>
                 <DataGrid Grid.Row="3"
-                        ItemsSource="{Binding EgressRules}"
-                        AutoGenerateColumns="False"
-                        IsReadOnly="True">
+          ItemsSource="{Binding EgressRules}"
+          Tag="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"
+          AutoGenerateColumns="False"
+          IsReadOnly="True">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="Tag" 
+                Value="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"/>
+                            <Setter Property="ContextMenu">
+                                <Setter.Value>
+                                    <ContextMenu>
+                                        <MenuItem Header="Delete"
+                              Command="{Binding PlacementTarget.Tag.DeleteRuleCommand,
+                                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                              CommandParameter="{Binding}"/>
+                                    </ContextMenu>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </DataGrid.RowStyle>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Protocol"
                                 Binding="{Binding Protocol}"/>

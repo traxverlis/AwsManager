@@ -22,16 +22,24 @@ namespace AwsManager.ViewModels
     {
         public static string Name => "EC2 Instances";
         private bool _isLoading;
+        public bool IsNotLoading => !IsLoading;
         public bool IsLoading
         {
             get => _isLoading;
-            set => SetField(ref _isLoading, value);
+            set
+            {
+                if (SetField(ref _isLoading, value))
+                {
+                    OnPropertyChanged(nameof(IsNotLoading));
+                }
+            }
         }
 
         public ObservableCollection<Ec2InstanceModel> Instances { get; }
         public ICommand RefreshCommand { get; }
         public ICommand StartInstanceCommand { get; }
         public ICommand StopInstanceCommand { get; }
+        public ICommand TerminateInstanceCommand { get; }
         public ICommand ConnectCommand { get; }
         public ICommand DisconnectCommand { get; }
         public ICommand ViewDetailsCommand { get; }
@@ -51,6 +59,7 @@ namespace AwsManager.ViewModels
             RefreshCommand = new RelayCommand(async _ => await LoadInstancesAsync(), _ => !IsLoading);
             StartInstanceCommand = new RelayCommand(StartInstance, _ => SelectedInstance != null);
             StopInstanceCommand = new RelayCommand(StopInstance, _ => SelectedInstance != null);
+            TerminateInstanceCommand = new RelayCommand(TerminateInstance, _ => SelectedInstance != null);
             ConnectCommand = new RelayCommand(Connect, _ => SelectedInstance != null && SelectedInstance.IsSsmManaged);
             DisconnectCommand = new RelayCommand(Disconnect, _ => !IsLoading);
             ViewDetailsCommand = new RelayCommand(ViewDetails, _ => SelectedInstance != null);
@@ -89,7 +98,9 @@ namespace AwsManager.ViewModels
                             PublicIp = instance.PublicIpAddress ?? "N/A",
                             PrivateIp = instance.PrivateIpAddress ?? "N/A",
                             IsSsmManaged = ssmInfo?.PingStatus == PingStatus.Online,
-                            SecurityGroups = string.Join(", ", instance.SecurityGroups.Select(sg => sg.GroupName)),
+                            SecurityGroups = instance.SecurityGroups != null && instance.SecurityGroups.Any()
+                                ? string.Join(", ", instance.SecurityGroups.Select(sg => sg.GroupName))
+                                : "N/A",
                             Platform = instance.PlatformDetails?.ToString() ?? "N/A"
                         });
                     }
@@ -109,7 +120,8 @@ namespace AwsManager.ViewModels
                     // Tentative de relancer la connexion SSO
 
 
-                    await ReloginSsoAsync("");
+                    var profile = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "";
+                    await ReloginSsoAsync(profile);
                 }
                 else
                 {
@@ -135,7 +147,7 @@ namespace AwsManager.ViewModels
                 {
                     InstanceIds = [SelectedInstance.InstanceId]
                 };
-                
+
 
                 await EC2Client.StartInstancesAsync(request);
 
@@ -180,6 +192,39 @@ namespace AwsManager.ViewModels
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to stop DB instance {SelectedInstance.InstanceId}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+
+        }
+
+        private async void TerminateInstance(object? parameter)
+        {
+            if (SelectedInstance == null) return;
+
+            try
+            {
+                IsLoading = true;
+                using var EC2Client = new AmazonEC2Client();
+
+                var request = new TerminateInstancesRequest
+                {
+                    InstanceIds = [SelectedInstance.InstanceId]
+                };
+
+
+                await EC2Client.TerminateInstancesAsync(request);
+
+                MessageBox.Show($"DB instance {SelectedInstance.InstanceId} is Terminating...", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                // Refresh the instances list to show updated status
+                await LoadInstancesAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to terminate DB instance {SelectedInstance.InstanceId}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -241,14 +286,14 @@ namespace AwsManager.ViewModels
 
             connectionWindow.ShowDialog();
         }
-                private static async Task ReloginSsoAsync(string profileName)
+        private static async Task ReloginSsoAsync(string profileName)
         {
             try
             {
                 var psi = new ProcessStartInfo
                 {
                     FileName = "aws",
-                    Arguments = $"sso login --profile egf-devops", // ⚠ c'est bien "sso login", pas "sso-login"
+                    Arguments = $"sso login --profile {profileName}", 
                     UseShellExecute = true
                 };
 

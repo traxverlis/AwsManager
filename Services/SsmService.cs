@@ -26,10 +26,10 @@ namespace AwsManager.Services
             var description = $"Port forward {instanceId} ({remotePort}:{localPort})";
             var parameters = $"portNumber={remotePort},localPortNumber={localPort}";
             var arguments = $"ssm start-session --target {instanceId} --document-name AWS-StartPortForwardingSession --parameters \"{parameters}\" {GetProfileArgument()} ";
-            LaunchAwsCliProcess(arguments, description);
+            LaunchAwsCliProcess(arguments, description,false);
         }
 
-        private static void LaunchAwsCliProcess(string arguments, string description)
+        private static void LaunchAwsCliProcess(string arguments, string description, bool windows =true)
         {
             try
             {
@@ -37,10 +37,11 @@ namespace AwsManager.Services
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = "cmd.exe", // Use cmd.exe to spawn a new window for the session
-                        Arguments = $"/C aws {arguments}",
-                        UseShellExecute = false,
-                        CreateNoWindow = !false,
+                        FileName = "cmd.exe",
+                        Arguments = $"/K aws {arguments}", // /K pour garder la fenêtre ouverte
+                        UseShellExecute = windows, // true pour ouvrir une nouvelle fenêtre
+                        CreateNoWindow = !windows, // false pour afficher la fenêtre
+                        WindowStyle = ProcessWindowStyle.Normal
                     }
                 };
                 process.Start();

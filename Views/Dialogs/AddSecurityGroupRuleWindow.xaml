@@ -1,0 +1,23 @@
+﻿<Window x:Class="AwsManager.Views.Dialogs.AddSecurityGroupRuleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        mc:Ignorable="d"
+        Title="Add Security Group Rule" SizeToContent="WidthAndHeight" WindowStartupLocation="CenterScreen"
+        d:DesignHeight="400" d:DesignWidth="400">
+    <StackPanel Margin="15">
+        <ComboBox x:Name="RuleTypeComboBox" Margin="5" SelectedIndex="0">
+            <ComboBoxItem Content="Ingress" />
+            <ComboBoxItem Content="Egress" />
+        </ComboBox>
+        <TextBox x:Name="ProtocolTextBox" Margin="5" Text="tcp" Tag="Protocol"/>
+        <TextBox x:Name="PortRangeTextBox" Margin="5" Tag="Port Range (e.g., 22 or 22-25)"/>
+        <TextBox x:Name="CidrTextBox" Margin="5" Text="0.0.0.0/0" Tag="Source/Destination (CIDR)"/>
+        <TextBox x:Name="DescriptionTextBox" Margin="5" Tag="Description"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+            <Button Content="OK" Width="75" Margin="5" Click="OkButton_Click"/>
+            <Button Content="Cancel" Width="75" Margin="5" IsCancel="True"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

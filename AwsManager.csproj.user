@@ -4,6 +4,9 @@
     <_LastSelectedProfileId>C:\Users\julien\source\repos\AwsManager\Properties\PublishProfiles\FolderProfile.pubxml</_LastSelectedProfileId>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Update="Views\Dialogs\AddSecurityGroupRuleWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Views\Dialogs\EditRecordSetWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>

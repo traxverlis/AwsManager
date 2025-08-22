@@ -3,10 +3,12 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using Amazon.EC2;
 using Amazon.EC2.Model;
 using AwsManager.Models;
+using AwsManager.Views.Dialogs;
 
 namespace AwsManager.ViewModels
 {
@@ -38,7 +40,7 @@ namespace AwsManager.ViewModels
             SecurityGroups = [];
             RefreshCommand = new RelayCommand(async _ => await LoadSecurityGroupsAsync(), _ => !IsLoading);
             AddRuleCommand = new RelayCommand(AddRule, _ => SelectedSecurityGroup != null);
-            DeleteRuleCommand = new RelayCommand(DeleteRule, _ => SelectedSecurityGroup != null);
+            DeleteRuleCommand = new RelayCommand(DeleteRule, _ => true);
 
             _ = LoadSecurityGroupsAsync();
         }
@@ -117,17 +119,160 @@ namespace AwsManager.ViewModels
             }
         }
 
-        private void AddRule(object? parameter)
+        private async void AddRule(object? parameter)
         {
-            MessageBox.Show($"This would open a dialog to add a rule to {SelectedSecurityGroup?.GroupName}", "Action: Add Rule", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+            if (SelectedSecurityGroup == null) return;
 
-        private void DeleteRule(object? parameter)
-        {
-            if (parameter is SecurityGroupRuleModel rule)
+            var dialog = new AddSecurityGroupRuleWindow
             {
-                MessageBox.Show($"This would delete the rule '{rule.Protocol} / {rule.PortRange}' from {SelectedSecurityGroup?.GroupName}", "Action: Delete Rule", MessageBoxButton.OK, MessageBoxImage.Information);
+                Owner = Application.Current.MainWindow
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    using var ec2Client = new AmazonEC2Client();
+                    var ipPermission = new IpPermission
+                    {
+                        IpProtocol = dialog.Protocol,
+                        Ipv4Ranges = new List<IpRange>
+                        {
+                            new IpRange { CidrIp = dialog.Cidr, Description = dialog.Description }
+                        }
+                    };
+
+                    if (dialog.PortRange.Equals("All", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ipPermission.FromPort = -1;
+                        ipPermission.ToPort = -1;
+                    }
+                    else
+                    {
+                        var ports = dialog.PortRange.Split('-');
+                        if (ports.Length == 2 && int.TryParse(ports[0], out var fromPort) && int.TryParse(ports[1], out var toPort))
+                        {
+                            ipPermission.FromPort = fromPort;
+                            ipPermission.ToPort = toPort;
+                        }
+                        else if (int.TryParse(dialog.PortRange, out var port))
+                        {
+                            ipPermission.FromPort = port;
+                            ipPermission.ToPort = port;
+                        }
+                        else
+                        {
+                            MessageBox.Show("Invalid Port Range format. Use a single number (e.g., 22) or a range (e.g., 80-443).", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+                    }
+
+                    if (dialog.RuleType == "Ingress")
+                    {
+                        var request = new AuthorizeSecurityGroupIngressRequest
+                        {
+                            GroupId = SelectedSecurityGroup.GroupId,
+                            IpPermissions = new List<IpPermission> { ipPermission }
+                        };
+                        await ec2Client.AuthorizeSecurityGroupIngressAsync(request);
+                    }
+                    else // Egress
+                    {
+                        var request = new AuthorizeSecurityGroupEgressRequest
+                        {
+                            GroupId = SelectedSecurityGroup.GroupId,
+                            IpPermissions = new List<IpPermission> { ipPermission }
+                        };
+                        await ec2Client.AuthorizeSecurityGroupEgressAsync(request);
+                    }
+
+                    MessageBox.Show("Rule added successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    await LoadSecurityGroupsAsync(); // Refresh
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to add rule: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
+
+        private async void DeleteRule(object? parameter)
+        {
+            if (parameter is not SecurityGroupRuleModel rule || SelectedSecurityGroup == null) return;
+
+            var result = MessageBox.Show($"Are you sure you want to delete this rule?\n\n{rule.Type}: {rule.Protocol} / {rule.PortRange} / {rule.SourceOrDestination}", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result == MessageBoxResult.No) return;
+
+            try
+            {
+                using var ec2Client = new AmazonEC2Client();
+                var ipPermission = new IpPermission
+                {
+                    IpProtocol = rule.Protocol,
+                    Ipv4Ranges = new List<IpRange>
+                    {
+                        new IpRange { CidrIp = rule.SourceOrDestination }
+                    }
+                };
+
+                if (rule.PortRange.Equals("All", StringComparison.OrdinalIgnoreCase))
+                {
+                    ipPermission.FromPort = -1;
+                    ipPermission.ToPort = -1;
+                }
+                else
+                {
+                    var ports = rule.PortRange.Split('-');
+                    if (ports.Length == 2 && int.TryParse(ports[0], out var fromPort) && int.TryParse(ports[1], out var toPort))
+                    {
+                        ipPermission.FromPort = fromPort;
+                        ipPermission.ToPort = toPort;
+                    }
+                    else if (int.TryParse(rule.PortRange, out var port))
+                    {
+                        ipPermission.FromPort = port;
+                        ipPermission.ToPort = port;
+                    }
+                }
+
+                if (rule.Type == "Ingress")
+                {
+                    var request = new RevokeSecurityGroupIngressRequest
+                    {
+                        GroupId = SelectedSecurityGroup.GroupId,
+                        IpPermissions = new List<IpPermission> { ipPermission }
+                    };
+                    await ec2Client.RevokeSecurityGroupIngressAsync(request);
+                }
+                else // Egress
+                {
+                    var request = new RevokeSecurityGroupEgressRequest
+                    {
+                        GroupId = SelectedSecurityGroup.GroupId,
+                        IpPermissions = new List<IpPermission> { ipPermission }
+                    };
+                    await ec2Client.RevokeSecurityGroupEgressAsync(request);
+                }
+
+                MessageBox.Show("Rule deleted successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                await LoadSecurityGroupsAsync(); // Refresh
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to delete rule: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var menuItem = (MenuItem)sender;
+            var rule = menuItem.CommandParameter as SecurityGroupRuleModel;
+            var vm = menuItem.Command;
+
+            MessageBox.Show($"MenuItem clicked!\nRule: {rule?.Type}\nCommand: {vm != null}", "Debug");
+        }
+
+
     }
+
 }
