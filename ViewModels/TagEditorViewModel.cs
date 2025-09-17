@@ -83,9 +83,21 @@ namespace AwsManager.ViewModels
             {
                 using var ec2Client = new AmazonEC2Client();
 
+                // Filtrer les tags réservés AWS
+                var originalFiltered = _originalTags
+                    .Where(t => !t.Key.StartsWith("aws:", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                var currentFiltered = Tags
+                    .Where(t => !t.Key.StartsWith("aws:", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+
 
                 // Find tags to delete
-                var tagsToDelete = _originalTags.Where(orig => !Tags.Any(curr => curr.Key == orig.Key)).ToList();
+                var tagsToDelete = originalFiltered
+                    .Where(orig => !currentFiltered.Any(curr => curr.Key == orig.Key))
+                    .ToList();
+
                 if (tagsToDelete.Count != 0)
                 {
                     var deleteRequest = new DeleteTagsRequest
@@ -97,7 +109,10 @@ namespace AwsManager.ViewModels
                 }
 
                 // Find tags to create or update
-                var tagsToCreate = Tags.Select(t => new Tag { Key = t.Key, Value = t.Value }).ToList();
+                var tagsToCreate = currentFiltered
+                    .Select(t => new Tag { Key = t.Key, Value = t.Value })
+                    .ToList();
+
                 if (tagsToCreate.Count != 0)
                 {
                     var createRequest = new CreateTagsRequest

@@ -1,5 +1,5 @@
-﻿<Window x:Class="AwsManager.Views.Dialogs.TagEditorWindow"
-        x:Name="TagEditorControl"
+﻿<Window x:Class="AwsManager.Views.Dialogs.ASGTagEditorWindow"
+        x:Name="ASGTagEditorControl"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -7,7 +7,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:viewmodels="clr-namespace:AwsManager.ViewModels"
         mc:Ignorable="d"
-        d:DataContext="{d:DesignInstance Type=viewmodels:TagEditorViewModel, IsDesignTimeCreatable=True}"
+        d:DataContext="{d:DesignInstance Type=viewmodels:AutoScalingTagEditorViewModel, IsDesignTimeCreatable=True}"
         Title="Tag Editor"
         Height="500" Width="600"
         WindowStartupLocation="CenterOwner">
@@ -27,10 +27,11 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Key" Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
                 <DataGridTextColumn Header="Value" Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Width="2*"/>
+                <DataGridCheckBoxColumn Header="Propagate at Launch" Binding="{Binding PropageAtLaunch, UpdateSourceTrigger=PropertyChanged}" Width="*" />
                 <DataGridTemplateColumn  Header="Delete" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Button Command="{Binding DataContext.RemoveTagCommand, ElementName=TagEditorControl}"
+                            <Button Command="{Binding DataContext.RemoveTagCommand, ElementName=ASGTagEditorControl}"
         CommandParameter="{Binding}"
         Style="{StaticResource MaterialDesignIconButton}">
                                 <materialDesign:PackIcon Kind="DeleteOutline" />

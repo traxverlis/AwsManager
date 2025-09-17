@@ -7,5 +7,7 @@ namespace AwsManager.Models
         public string PortRange { get; set; } = string.Empty;
         public string SourceOrDestination { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+
+        public int SortKey { get; set; }
     }
 }

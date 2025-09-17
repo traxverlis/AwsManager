@@ -1,4 +1,5 @@
 <UserControl x:Class="AwsManager.Views.AutoScalingView"
+                          x:Name="AutoScalingViewControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -36,6 +37,23 @@
                 IsReadOnly="True"
                 CanUserAddRows="False"
                   Style="{StaticResource MaterialDesignDataGrid}">
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow" >
+                    <Setter Property="Tag" 
+                Value="{Binding ElementName=AutoScalingViewControl, Path=DataContext}"/>
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu>
+                                <MenuItem Header="Edit Tags"
+                              Command="{Binding PlacementTarget.Tag.EditTagsCommand,
+                                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                              CommandParameter="{Binding}"/>
+                            </ContextMenu>
+
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Name"
                         Binding="{Binding AutoScalingGroupName}"

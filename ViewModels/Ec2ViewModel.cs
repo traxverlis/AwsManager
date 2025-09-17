@@ -84,11 +84,32 @@ namespace AwsManager.ViewModels
                 var instancesResponse = await ec2Client.DescribeInstancesAsync(new DescribeInstancesRequest());
                 var ssmResponse = await ssmClient.DescribeInstanceInformationAsync(new DescribeInstanceInformationRequest());
 
+                var allSsmInstances = new List<InstanceInformation>();
+                string? nextToken = null;
+
+                do
+                {
+                    var request = new DescribeInstanceInformationRequest
+                    {
+                        MaxResults = 50, // valeur max autorisée
+                        NextToken = nextToken
+                    };
+
+                    var response = await ssmClient.DescribeInstanceInformationAsync(request);
+
+                    if (response.InstanceInformationList != null)
+                        allSsmInstances.AddRange(response.InstanceInformationList);
+
+                    nextToken = response.NextToken;
+                }
+                while (!string.IsNullOrEmpty(nextToken));
+
+
                 foreach (var reservation in instancesResponse.Reservations)
                 {
                     foreach (var instance in reservation.Instances)
                     {
-                        var ssmInfo = ssmResponse.InstanceInformationList.FirstOrDefault(i => i.InstanceId == instance.InstanceId);
+                        var ssmInfo = allSsmInstances.FirstOrDefault(i => i.InstanceId == instance.InstanceId);
                         Instances.Add(new Ec2InstanceModel
                         {
                             InstanceId = instance.InstanceId,

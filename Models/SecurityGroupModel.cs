@@ -10,5 +10,6 @@ namespace AwsManager.Models
         public string VpcId { get; set; } = string.Empty;
         public List<SecurityGroupRuleModel> IngressRules { get; set; } = [];
         public List<SecurityGroupRuleModel> EgressRules { get; set; } = [];
+
     }
 }

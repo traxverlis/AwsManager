@@ -99,7 +99,21 @@
                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" />
                 <DataGridTextColumn Header="Instance ID" Binding="{Binding InstanceId}" />
                 <DataGridTextColumn Header="Type" Binding="{Binding InstanceType}" />
-                <DataGridTextColumn Header="State" Binding="{Binding State}" />
+                <DataGridTextColumn Header="State" Binding="{Binding State}" >
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="Orange"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding State}" Value="running">
+                                    <Setter Property="Foreground" Value="Green"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding State}" Value="stopped">
+                                    <Setter Property="Foreground" Value="Red"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
                 <DataGridTextColumn Header="Public IP" Binding="{Binding PublicIp}" />
                 <DataGridTextColumn Header="Private IP" Binding="{Binding PrivateIp}" />
                 <DataGridTextColumn Header="Plateform" Binding="{Binding Platform}" />

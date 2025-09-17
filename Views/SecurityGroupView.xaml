@@ -88,6 +88,10 @@
                               Command="{Binding PlacementTarget.Tag.DeleteRuleCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                               CommandParameter="{Binding}"/>
+                                        <MenuItem Header="Edit"
+                              Command="{Binding PlacementTarget.Tag.EditRuleCommand,
+                                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                              CommandParameter="{Binding}"/>
                                     </ContextMenu>
                                 </Setter.Value>
                             </Setter>
@@ -126,6 +130,10 @@
                                     <ContextMenu>
                                         <MenuItem Header="Delete"
                               Command="{Binding PlacementTarget.Tag.DeleteRuleCommand,
+                                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                              CommandParameter="{Binding}"/>
+                                        <MenuItem Header="Edit"
+                              Command="{Binding PlacementTarget.Tag.EditRuleCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                               CommandParameter="{Binding}"/>
                                     </ContextMenu>
