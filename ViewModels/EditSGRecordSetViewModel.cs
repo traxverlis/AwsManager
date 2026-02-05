@@ -4,7 +4,7 @@ using AwsManager.Models;
 
 namespace AwsManager.ViewModels
 {
-    public class EditSGRecordSetViewModel : ViewModelBase
+    public class EditSGRecordSetViewModel(ResourceRecordSetModel? recordToEdit = null) : ViewModelBase
     {
         public string Name { get; set; }
         public string Type { get; set; }
@@ -13,27 +13,5 @@ namespace AwsManager.ViewModels
 
         public List<string> RecordTypes { get; } = ["A", "AAAA", "CNAME", "MX", "NS", "PTR", "SOA", "SPF", "SRV", "TXT"];
         public ResourceRecordSetModel OriginalRecord { get; }
-
-        public EditSGRecordSetViewModel(ResourceRecordSetModel? recordToEdit = null)
-        {
-            //if (recordToEdit != null)
-            //{
-            //    // Editing an existing record
-            //    OriginalRecord = recordToEdit;
-            //    Name = recordToEdit.Name;
-            //    Type = recordToEdit.Type;
-            //    Ttl = recordToEdit.TTL;
-            //    Value = string.Join("\n", recordToEdit.ResourceRecords);
-            //}
-            //else
-            //{
-            //    // Creating a new record
-            //    OriginalRecord = new ResourceRecordSetModel();
-            //    Name = "";
-            //    Type = "A";
-            //    Ttl = 300;
-            //    Value = "";
-            //}
-        }
     }
 }

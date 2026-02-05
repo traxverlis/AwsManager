@@ -116,7 +116,7 @@ namespace AwsManager.ViewModels
 
                 var response = await asgClient.DescribeScheduledActionsAsync(request);
 
-                return response.ScheduledUpdateGroupActions.Select(action => new ScheduledActionModel
+                return [.. response.ScheduledUpdateGroupActions.Select(action => new ScheduledActionModel
                 {
                     ScheduledActionName = action.ScheduledActionName ?? "",
                     AutoScalingGroupName = action.AutoScalingGroupName ?? "",
@@ -127,7 +127,7 @@ namespace AwsManager.ViewModels
                     MaxSize = action.MaxSize,
                     DesiredCapacity = action.DesiredCapacity,
                     Time = action.Time
-                }).ToList();
+                })];
             }
             catch (Exception ex)
             {

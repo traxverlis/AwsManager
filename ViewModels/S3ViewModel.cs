@@ -12,6 +12,7 @@ using AwsManager.Models;
 
 using Microsoft.WindowsAPICodePack.Dialogs;
 using AwsManager.Views.Dialogs;
+using System.Globalization;
 
 
 namespace AwsManager.ViewModels
@@ -33,6 +34,7 @@ namespace AwsManager.ViewModels
 
         public ICommand DownloadFileCommand { get; }
         public ICommand DeleteFileCommand { get; }
+        public ICommand PresignFileCommand { get; }
         public ICommand UploadFileCommand { get; }
 
         private S3ItemModel? _selectedFile;
@@ -59,6 +61,7 @@ namespace AwsManager.ViewModels
             OpenItemCommand = new RelayCommand(async item => await OpenItemAsync(item), _ => !IsLoading);
             DownloadFileCommand = new RelayCommand(async _ => await DownloadFileAsync(), _ => SelectedFile != null && SelectedFile.ItemType == "File");
             DeleteFileCommand = new RelayCommand(async file => await DeleteFileAsync(), _ => SelectedFile != null && SelectedFile.ItemType == "File");
+            PresignFileCommand = new RelayCommand(async file => await PresignFileAsync(), _ => SelectedFile != null && SelectedFile.ItemType == "File");
             UploadFileCommand = new RelayCommand(async _ => await UploadFileAsync(), _ => !IsLoading && !string.IsNullOrEmpty(_currentBucket));
 
 
@@ -181,7 +184,12 @@ namespace AwsManager.ViewModels
                         Key = obj.Key,
                         Name = fileName,
                         ItemType = "File",
-                        Size = obj.Size ?? 0,
+                        Size = ((obj.Size ?? 0) / (1024 * 1024)).ToString("N0", new NumberFormatInfo
+                        {
+                            NumberGroupSizes = new[] { 3 },
+                            NumberGroupSeparator = " "
+                        }) + " Mo" ?? "",
+        
                         LastModified = obj.LastModified
                     });
                 }
@@ -323,6 +331,54 @@ namespace AwsManager.ViewModels
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Error);
             }
+        }
+
+        private Task PresignFileAsync()
+        {
+            if (SelectedFile == null || SelectedFile.ItemType != "File")
+            {
+                System.Windows.MessageBox.Show("Please select a file to download.", "No File Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return Task.CompletedTask;
+            }
+
+            var key = SelectedFile.Key;
+            var bucketName = _currentBucket;
+            var fileName = Path.GetFileName(key);
+
+            try
+            {
+                using var s3Client = new AmazonS3Client();
+                var request = new GetPreSignedUrlRequest
+                {
+                    BucketName = bucketName,
+                    Key = key,
+                    Expires = DateTime.UtcNow.AddHours(1) // URL valide pendant 1 heure
+                };
+                var url = s3Client.GetPreSignedURL(request);
+
+                //add url to clipboard
+                Clipboard.SetText(url);
+
+
+                // Afficher l'URL dans une boîte de dialogue
+
+                MessageBox.Show($" URL copier dans le presse papier:\n {url}", "Presigned URL"
+                                ,
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Information);
+                /*var presignDialog = new PresignUrlDialog(url);
+                presignDialog.Title = "Presigned URL";
+                presignDialog.ShowDialog();*/
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to generate presigned URL: {ex.Message}",
+                                "Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error);
+            }
+
+            return Task.CompletedTask;
         }
 
     }

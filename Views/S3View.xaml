@@ -22,6 +22,7 @@
             <Button Content="Download Selected" Command="{Binding DownloadFileCommand}" Margin="5,0,0,0"/>
             <Button Content="Delete Selected" Command="{Binding DeleteFileCommand}" Margin="5,0,0,0"/>
             <Button Content="Upload File" Command="{Binding UploadFileCommand}" Margin="5,0,0,0"/>
+            <Button Content="Presign File" Command="{Binding PresignFileCommand}" Margin="5,0,0,0"/>
             <TextBlock Text="{Binding CurrentPath}"
                     VerticalAlignment="Center"
                     Margin="10,0"
