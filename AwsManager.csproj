@@ -7,6 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <SatelliteResourceLanguages>en;fr</SatelliteResourceLanguages>
     <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**</DefaultItemExcludes>
     <PackageIcon>aws.png</PackageIcon>
     <ApplicationIcon>amazon_aws_logo_icon_145507.ico</ApplicationIcon>
