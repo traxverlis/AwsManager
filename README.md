@@ -16,6 +16,20 @@ Cible : .NET 10 LTS, AWS SDK .NET v4.
   Un changement de profil ou region detache les anciennes listes et selections.
   Il ne termine pas les sessions SSM deja ouvertes.
 
+Depuis une GitHub Release, choisir l'un des deux formats :
+
+- `AwsManager-v1.2.3-win-x64-Setup.exe` : installation pour l'utilisateur courant,
+  sans droits administrateur, dans `%LOCALAPPDATA%\Programs\AwsManager`.
+  Raccourci dans le menu Demarrer, raccourci Bureau facultatif et desinstallation
+  depuis les parametres Windows. L'assistant est disponible en francais et anglais.
+- `AwsManager-v1.2.3-win-x64.zip` : version portable a extraire integralement,
+  puis lancer `AwsManager.exe` dans le dossier extrait.
+
+Les deux formats embarquent .NET et les ressources anglaises/francaises.
+Installer une nouvelle version remplace la precedente ; aucune mise a jour
+automatique n'est integree. Les preferences dans `%LOCALAPPDATA%\AwsManager`
+et les profils AWS ne sont pas supprimes par l'installateur ou la desinstallation.
+
 Compilation et tests, depuis la racine avec le SDK .NET 10 :
 
 ```powershell
@@ -28,6 +42,17 @@ Lancer `artifacts/AwsManager/AwsManager.exe`. Conserver tout le dossier publie.
 Le runtime .NET est inclus ; AWS CLI et le plugin SSM restent des prerequis externes.
 Si une instance verrouille la sortie Release, compiler avec
 `-p:OutputPath=bin/AgentCheck/`, sans fermer cette instance de force.
+
+Pour generer aussi l'installateur apres publication, utiliser Inno Setup 6.3 ou
+ulterieur (serie 6), avec `ISCC.exe` accessible depuis le terminal :
+
+```powershell
+ISCC.exe /DAppVersion=1.2.3 /DAppNumericVersion=1.2.3 installer/AwsManager.iss
+```
+
+Le [script Inno Setup](installer/AwsManager.iss) lit `artifacts/AwsManager` et
+produit le setup dans `artifacts/release`. Pour une prerelease, passer par exemple
+`/DAppVersion=1.2.3-rc.1` et conserver `/DAppNumericVersion=1.2.3`.
 
 ## Automatisation GitHub
 
@@ -44,10 +69,13 @@ Si une instance verrouille la sortie Release, compiler avec
   et MSTest sont regroupes. Les actions sont epinglees par commit ; les mises a
   jour restent des PR a verifier, sans fusion automatique.
 - [Release](.github/workflows/release.yml) : un tag `v1.2.3` relance la CI sous
-  Windows, puis un job Ubuntu archive et publie les binaires Windows deja testes :
-  `AwsManager-v1.2.3-win-x64.zip`, son fichier `.sha256` et des notes generees.
+  Windows, puis un job Windows utilise Inno Setup 6 preinstalle pour empaqueter
+  les binaires deja testes, sans les recompiler. Il publie
+  `AwsManager-v1.2.3-win-x64.zip`, `AwsManager-v1.2.3-win-x64-Setup.exe`,
+  un fichier `.sha256` pour chacun et des notes generees.
   Un tag comme `v1.2.3-rc.1` cree une prerelease, sans remplacer la derniere version
-  stable. Aucun acces AWS n'est effectue. Les binaires ne sont pas signes.
+  stable. Aucun acces AWS n'est effectue. Les binaires et l'installateur ne sont
+  pas signes ; Windows peut afficher un avertissement SmartScreen.
 
 Apres integration de ces fichiers sur `master` et verification des controles,
 creer le tag sur le commit a distribuer puis le pousser pour declencher la release :

@@ -17,7 +17,7 @@ jobs:
 
   publish:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 15
     permissions:
       contents: write
@@ -34,27 +34,51 @@ jobs:
           if ($env:RELEASE_TAG -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$') {
             throw 'Expected a tag such as v1.2.3 or v1.2.3-rc.1.'
           }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - name: Download tested application
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: AwsManager-win-x64
           path: artifacts/AwsManager
+      - name: Build Windows installer
+        run: |
+          $compiler = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+          ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (-not $compiler) {
+            throw 'Inno Setup 6 was not found on the Windows runner.'
+          }
+          $version = $env:RELEASE_TAG.Substring(1)
+          $numericVersion = $version.Split('-')[0]
+          & $compiler "/DAppVersion=$version" "/DAppNumericVersion=$numericVersion" installer/AwsManager.iss
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Windows installer compilation failed.'
+          }
       - name: Package release
         run: |
           New-Item -ItemType Directory -Path artifacts/release -Force | Out-Null
           $archiveName = "AwsManager-$env:RELEASE_TAG-win-x64.zip"
           $archivePath = Join-Path 'artifacts/release' $archiveName
           Compress-Archive -Path 'artifacts/AwsManager/*' -DestinationPath $archivePath
-          $hash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  $archiveName" | Set-Content -LiteralPath "$archivePath.sha256" -Encoding ascii
+          $installerPath = "artifacts/release/AwsManager-$env:RELEASE_TAG-win-x64-Setup.exe"
+          foreach ($assetPath in @($archivePath, $installerPath)) {
+            $hash = (Get-FileHash -LiteralPath $assetPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+            $assetName = Split-Path -Leaf $assetPath
+            "$hash  $assetName" | Set-Content -LiteralPath "$assetPath.sha256" -Encoding ascii
+          }
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $archivePath = "artifacts/release/AwsManager-$env:RELEASE_TAG-win-x64.zip"
+          $installerPath = "artifacts/release/AwsManager-$env:RELEASE_TAG-win-x64-Setup.exe"
           $releaseArguments = @(
             'release', 'create', $env:RELEASE_TAG,
             $archivePath, "$archivePath.sha256",
+            $installerPath, "$installerPath.sha256",
             '--verify-tag', '--generate-notes', '--title', "AwsManager $env:RELEASE_TAG"
           )
           if ($env:RELEASE_TAG.Contains('-')) {
