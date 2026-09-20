@@ -31,11 +31,11 @@ Si une instance verrouille la sortie Release, compiler avec
 
 ## Automatisation GitHub
 
-- [CI .NET](.github/workflows/dotnet.yml) : compilation et tests sur les push/PR
-  vers `master`, ou lancement manuel. La categorie `LiveReadOnly` est exclue :
+- [CI .NET](.github/workflows/dotnet.yml) : compilation et tests sous Windows sur
+  les push/PR vers `master`, ou lancement manuel. La categorie `LiveReadOnly` est exclue :
   aucun profil ni secret AWS n'est requis. Les rapports TRX sont conserves meme
   en cas d'echec des tests ; rapports et application Windows restent disponibles
-  comme artefacts pendant 14 jours. Les executions depassees d'une PR sont annulees.
+  comme artefacts pendant 3 jours. Les executions depassees d'une PR sont annulees.
 - [CodeQL](.github/workflows/codeql.yml) : analyse C# avec compilation WPF sous
   Windows sur les push/PR vers `master`, chaque lundi a 06:23 UTC ou manuellement.
   Les resultats sont consultables dans **Security > Code scanning**.
@@ -43,8 +43,9 @@ Si une instance verrouille la sortie Release, compiler avec
   et GitHub Actions chaque lundi a 08:00, heure de Paris. Les paquets AWS SDK
   et MSTest sont regroupes. Les actions sont epinglees par commit ; les mises a
   jour restent des PR a verifier, sans fusion automatique.
-- [Release](.github/workflows/release.yml) : un tag `v1.2.3` relance la CI puis
-  publie `AwsManager-v1.2.3-win-x64.zip`, son fichier `.sha256` et des notes generees.
+- [Release](.github/workflows/release.yml) : un tag `v1.2.3` relance la CI sous
+  Windows, puis un job Ubuntu archive et publie les binaires Windows deja testes :
+  `AwsManager-v1.2.3-win-x64.zip`, son fichier `.sha256` et des notes generees.
   Un tag comme `v1.2.3-rc.1` cree une prerelease, sans remplacer la derniere version
   stable. Aucun acces AWS n'est effectue. Les binaires ne sont pas signes.
 
