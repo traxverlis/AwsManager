@@ -18,20 +18,18 @@ namespace AwsManager.Services
             ActiveSessions = [];
         }
 
-        public void AddSession(Process process, string description)
+        public TrackedSessionModel AddSession(Process process, string description)
         {
-            if (process == null) return;
+            ArgumentNullException.ThrowIfNull(process);
 
             var session = new TrackedSessionModel(process, description);
 
             // Ensure the process can raise events
-            process.EnableRaisingEvents = true;
-
             // Register for the Exited event to remove the session from the list
             process.Exited += (sender, args) =>
             {
                 // We need to update the collection on the UI thread
-                App.Current.Dispatcher.Invoke(() =>
+                App.Current.Dispatcher.BeginInvoke(() =>
                 {
                     if (ActiveSessions.Contains(session))
                     {
@@ -42,10 +40,14 @@ namespace AwsManager.Services
 
             // Add the session to the collection on the UI thread
             App.Current.Dispatcher.Invoke(() => ActiveSessions.Add(session));
+            process.EnableRaisingEvents = true;
+            if (process.HasExited) App.Current.Dispatcher.Invoke(() => ActiveSessions.Remove(session));
+            return session;
         }
 
         public void KillSession(TrackedSessionModel session)
         {
+            if (!ActiveSessions.Contains(session)) return;
             try
             {
                 if (!session.Process.HasExited)
@@ -53,13 +55,9 @@ namespace AwsManager.Services
                     session.Process.Kill(true); // Kill entire process tree
                 }
             }
-            catch (Exception)
+            catch (Exception exception)
             {
-                // Process may have already exited, which is fine.
-                // The Exited event will clean it up.
-                App.Current.Dispatcher.Invoke(() => {
-                    if (ActiveSessions.Contains(session)) ActiveSessions.Remove(session);
-                });
+                NotificationService.Publish($"Arret du processus {session.ProcessId} impossible : {exception.GetType().Name}.");
             }
         }
     }

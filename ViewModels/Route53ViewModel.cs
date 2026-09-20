@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -9,16 +9,18 @@ using Amazon.Route53;
 using Amazon.Route53.Model;
 using AwsManager.Models;
 using AwsManager.Views.Dialogs;
+using AwsManager.Services;
 
 
 namespace AwsManager.ViewModels
 {
-    public class Route53ViewModel : ViewModelBase, IRefreshableViewModel
+    public class Route53ViewModel : AwsResourceViewModel, IRefreshableViewModel
     {
         public static string Name => "Route 53";
 
         private bool _isLoading;
-        public bool IsLoading { get => _isLoading; set => SetField(ref _isLoading, value); }
+        private int _loadVersion;
+        public bool IsLoading { get => _isLoading; set { if (SetField(ref _isLoading, value)) CommandManager.InvalidateRequerySuggested(); } }
 
         public ObservableCollection<HostedZoneModel> HostedZones { get; }
         private HostedZoneModel? _selectedHostedZone;
@@ -27,9 +29,10 @@ namespace AwsManager.ViewModels
             get => _selectedHostedZone;
             set
             {
-                if (SetField(ref _selectedHostedZone, value) && value != null)
+                if (SetField(ref _selectedHostedZone, value))
                 {
-                    _ = LoadRecordSetsAsync();
+                    if (value != null) _ = LoadRecordSetsAsync();
+                    else { ++_loadVersion; ResourceRecordSets.Clear(); SelectedRecordSet = null; }
                 }
             }
         }
@@ -47,25 +50,33 @@ namespace AwsManager.ViewModels
         public ICommand UpdateRecordCommand { get; }
         public ICommand DeleteRecordCommand { get; }
 
-        public Route53ViewModel()
+        public Route53ViewModel() : this(null) { }
+        public Route53ViewModel(IAwsClientFactory? clientFactory, AwsContext? context = null) : base(clientFactory, context)
         {
             HostedZones = [];
             ResourceRecordSets = [];
+            ConfigureFilter<ResourceRecordSetModel>(ResourceRecordSets, record => $"{record.Name} {record.Type} {record.Value} {record.Routing}");
 
-            RefreshCommand = new RelayCommand(async _ => await LoadHostedZonesAsync(), _ => !IsLoading);
-            CreateRecordCommand = new RelayCommand(async _ => await CreateRecordAsync(), _ => SelectedHostedZone != null && !IsLoading);
-            UpdateRecordCommand = new RelayCommand(async _ => await UpdateRecordAsync(), _ => SelectedRecordSet != null && !IsLoading);
-            DeleteRecordCommand = new RelayCommand(async _ => await DeleteRecordAsync(), _ => SelectedRecordSet != null && !IsLoading);
+            RefreshCommand = new AsyncRelayCommand(async _ => await LoadHostedZonesAsync(), _ => !IsLoading && Allowed("route53:ListHostedZones"));
+            CreateRecordCommand = new AsyncRelayCommand(async _ => await CreateRecordAsync(), _ => SelectedHostedZone != null && !IsLoading && Allowed("route53:ChangeResourceRecordSets", ZoneArn, true));
+            UpdateRecordCommand = new AsyncRelayCommand(async _ => await UpdateRecordAsync(), _ => SelectedRecordSet?.IsEditable == true && !IsLoading && Allowed("route53:ChangeResourceRecordSets", ZoneArn, true));
+            DeleteRecordCommand = new AsyncRelayCommand(async _ => await DeleteRecordAsync(), _ => SelectedRecordSet?.IsEditable == true && !IsLoading && Allowed("route53:ChangeResourceRecordSets", ZoneArn, true));
         }
+
+        private string ZoneArn => $"arn:{Partition}:route53:::hostedzone/{SelectedHostedZone?.Id.Split('/').Last()}";
 
         private async Task LoadHostedZonesAsync()
         {
             IsLoading = true;
+            Status = "";
+            var selectedZoneId = SelectedHostedZone?.Id;
+            SelectedHostedZone = null;
+            SelectedRecordSet = null;
             HostedZones.Clear();
             ResourceRecordSets.Clear();
             try
             {
-                using var r53Client = new AmazonRoute53Client();
+                using var r53Client = ClientFactory.CreateRoute53Client();
                 var paginator = r53Client.Paginators.ListHostedZones(new ListHostedZonesRequest());
                 await foreach (var zone in paginator.HostedZones)
                 {
@@ -73,28 +84,48 @@ namespace AwsManager.ViewModels
                     {
                         Id = zone.Id,
                         Name = zone.Name,
-                        Comment = zone.Config.Comment ?? "",
-                        IsPrivateZone = zone.Config.PrivateZone ?? false,
+                        Comment = zone.Config?.Comment ?? "",
+                        IsPrivateZone = zone.Config?.PrivateZone ?? false,
                         ResourceRecordSetCount = zone.ResourceRecordSetCount ?? 0
                     });
                 }
+                SetField(ref _selectedHostedZone, HostedZones.FirstOrDefault(zone => zone.Id == selectedZoneId), nameof(SelectedHostedZone));
+                if (SelectedHostedZone != null) await LoadRecordSetsAsync();
             }
-            catch (Exception ex) { MessageBox.Show($"Failed to load Hosted Zones: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
+            catch (Exception ex) { ReportError(ex); }
             finally { IsLoading = false; }
+        }
+
+        public async Task<bool> SelectReferenceAsync(ResourceReference resource)
+        {
+            if (IsLoading) throw new InvalidOperationException("Attendez la fin du chargement DNS.");
+            var zone = HostedZones.FirstOrDefault(item => item.Id == (string.IsNullOrEmpty(resource.ParentId) ? resource.Id : resource.ParentId));
+            SetField(ref _selectedHostedZone, zone, nameof(SelectedHostedZone));
+            if (zone == null) return false;
+            await LoadRecordSetsAsync();
+            if (string.IsNullOrEmpty(resource.ParentId)) return true;
+            SelectedRecordSet = ResourceRecordSets.FirstOrDefault(item => ResourceNavigation.RecordId(item) == resource.Id);
+            return SelectedRecordSet != null;
         }
 
         private async Task LoadRecordSetsAsync()
         {
             if (SelectedHostedZone == null) return;
-
+            var zone = SelectedHostedZone;
+            var version = ++_loadVersion;
             IsLoading = true;
+            Status = "";
             ResourceRecordSets.Clear();
+            SelectedRecordSet = null;
             try
             {
-                using var r53Client = new AmazonRoute53Client();
-                var paginator = r53Client.Paginators.ListResourceRecordSets(new ListResourceRecordSetsRequest { HostedZoneId = SelectedHostedZone.Id });
+                if (!await CheckAccessAsync([new("route53:ListResourceRecordSets", ZoneArn)])) { Status = "Zone non autorisee ou non verifiee."; return; }
+                if (version != _loadVersion || SelectedHostedZone != zone) return;
+                using var r53Client = ClientFactory.CreateRoute53Client();
+                var paginator = r53Client.Paginators.ListResourceRecordSets(new ListResourceRecordSetsRequest { HostedZoneId = zone.Id });
                 await foreach (var record in paginator.ResourceRecordSets)
                 {
+                    if (version != _loadVersion || SelectedHostedZone != zone) return;
                     List<string> values = [];
 
                     if (record.ResourceRecords != null && record.ResourceRecords.Count > 0)
@@ -110,6 +141,7 @@ namespace AwsManager.ViewModels
 
                     ResourceRecordSets.Add(new ResourceRecordSetModel
                     {
+                        Original = record,
                         Name = record.Name ?? "",
                         Type = record.Type, // RRType est normalement non nullable
                         TTL = record.TTL ?? 0, // 0 si absent
@@ -117,24 +149,18 @@ namespace AwsManager.ViewModels
                     });
                 }
             }
-            catch (Exception ex) { MessageBox.Show($"Failed to load Record Sets for {SelectedHostedZone.Name}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
-            finally { IsLoading = false; }
+            catch (Exception ex) { ReportError(ex); }
+            finally { if (version == _loadVersion) IsLoading = false; }
         }
 
         private async Task CreateRecordAsync()
         {
             var vm = new EditRecordSetViewModel();
-            var window = new EditRecordSetWindow { DataContext = vm };
+            var window = new EditRecordSetWindow { DataContext = vm, Owner = Application.Current.MainWindow };
 
             if (window.ShowDialog() == true)
             {
-                var newRecord = new ResourceRecordSet
-                {
-                    Name = vm.Name,
-                    Type = vm.Type,
-                    TTL = vm.Ttl,
-                    ResourceRecords = [.. vm.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(v => new ResourceRecord { Value = v })]
-                };
+                var newRecord = vm.BuildRecord();
                 var change = new Change(ChangeAction.CREATE, newRecord);
                 await ExecuteChangeBatchAsync([change]);
             }
@@ -142,28 +168,15 @@ namespace AwsManager.ViewModels
 
         private async Task UpdateRecordAsync()
         {
-            if (SelectedRecordSet == null) return;
+            if (SelectedRecordSet?.IsEditable != true) return;
 
             var vm = new EditRecordSetViewModel(SelectedRecordSet);
-            var window = new EditRecordSetWindow { DataContext = vm };
+            var window = new EditRecordSetWindow { DataContext = vm, Owner = Application.Current.MainWindow };
 
             if (window.ShowDialog() == true)
             {
-                var oldRecord = new ResourceRecordSet
-                {
-                    Name = vm.OriginalRecord.Name,
-                    Type = vm.OriginalRecord.Type,
-                    TTL = vm.OriginalRecord.TTL,
-                    ResourceRecords = [.. vm.OriginalRecord.ResourceRecords.Select(v => new ResourceRecord { Value = v })]
-                };
-
-                var newRecord = new ResourceRecordSet
-                {
-                    Name = vm.Name,
-                    Type = vm.Type,
-                    TTL = vm.Ttl,
-                    ResourceRecords = [.. vm.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(v => new ResourceRecord { Value = v })]
-                };
+                var oldRecord = vm.OriginalRecord.Original!;
+                var newRecord = vm.BuildRecord();
 
                 var deleteChange = new Change(ChangeAction.DELETE, oldRecord);
                 var createChange = new Change(ChangeAction.CREATE, newRecord);
@@ -174,41 +187,33 @@ namespace AwsManager.ViewModels
 
         private async Task DeleteRecordAsync()
         {
-            if (SelectedRecordSet == null) return;
-
-            if (MessageBox.Show($"Are you sure you want to delete the record '{SelectedRecordSet.Name}'?", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
-            {
-                var recordToDelete = new ResourceRecordSet
-                {
-                    Name = SelectedRecordSet.Name,
-                    Type = SelectedRecordSet.Type,
-                    TTL = SelectedRecordSet.TTL,
-                    ResourceRecords = [.. SelectedRecordSet.ResourceRecords.Select(v => new ResourceRecord { Value = v })]
-                };
-                var change = new Change(ChangeAction.DELETE, recordToDelete);
-                await ExecuteChangeBatchAsync([change]);
-            }
+            if (SelectedRecordSet?.IsEditable != true) return;
+            var recordToDelete = SelectedRecordSet.Original!;
+            var change = new Change(ChangeAction.DELETE, recordToDelete);
+            await ExecuteChangeBatchAsync([change]);
         }
 
         private async Task ExecuteChangeBatchAsync(List<Change> changes)
         {
             if (SelectedHostedZone == null) return;
+            var zone = SelectedHostedZone;
+            if (!Confirm($"Appliquer les changements DNS dans {zone.Name} ?\n" + string.Join("\n", changes.Select(change => $"{change.Action} {change.ResourceRecordSet.Name} {change.ResourceRecordSet.Type}")))) return;
             IsLoading = true;
             try
             {
-                using var r53Client = new AmazonRoute53Client();
+                using var r53Client = ClientFactory.CreateRoute53Client();
                 var request = new ChangeResourceRecordSetsRequest
                 {
-                    HostedZoneId = SelectedHostedZone.Id,
+                    HostedZoneId = zone.Id,
                     ChangeBatch = new ChangeBatch { Changes = changes }
                 };
-                await r53Client.ChangeResourceRecordSetsAsync(request);
-                MessageBox.Show("Successfully submitted changes to Route 53.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                var response = await r53Client.ChangeResourceRecordSetsAsync(request);
+                NotificationService.Publish($"Changement DNS accepte : {response.ChangeInfo?.Status}. Propagation non encore confirmee.");
                 await LoadRecordSetsAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to apply changes: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ReportError(ex);
             }
             finally
             {

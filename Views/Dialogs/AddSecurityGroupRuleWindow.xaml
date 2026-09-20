@@ -1,23 +1,200 @@
 ﻿<Window x:Class="AwsManager.Views.Dialogs.AddSecurityGroupRuleWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        mc:Ignorable="d"
-        Title="Add Security Group Rule" SizeToContent="WidthAndHeight" WindowStartupLocation="CenterScreen"
-        d:DesignHeight="400" d:DesignWidth="400">
-    <StackPanel Margin="15">
-        <ComboBox x:Name="RuleTypeComboBox" Margin="5" SelectedIndex="0">
-            <ComboBoxItem Content="Ingress" />
-            <ComboBoxItem Content="Egress" />
-        </ComboBox>
-        <TextBox x:Name="ProtocolTextBox" Margin="5" Text="tcp" Tag="Protocol"/>
-        <TextBox x:Name="PortRangeTextBox" Margin="5" Tag="Port Range (e.g., 22 or 22-25)"/>
-        <TextBox x:Name="CidrTextBox" Margin="5" Text="0.0.0.0/0" Tag="Source/Destination (CIDR)"/>
-        <TextBox x:Name="DescriptionTextBox" Margin="5" Tag="Description"/>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
-            <Button Content="OK" Width="75" Margin="5" Click="OkButton_Click"/>
-            <Button Content="Cancel" Width="75" Margin="5" IsCancel="True"/>
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="{Binding Title}"
+        Width="660"
+        Height="760"
+        MinWidth="540"
+        MinHeight="540"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="VisibleWhenTrue"/>
+        <Style x:Key="OptionalMessage"
+                TargetType="TextBlock">
+            <Setter Property="TextWrapping"
+                    Value="Wrap"/>
+            <Setter Property="Margin"
+                    Value="0,8,0,0"/>
+            <Style.Triggers>
+                <Trigger Property="Text"
+                        Value="">
+                    <Setter Property="Visibility"
+                            Value="Collapsed"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Margin="0,0,0,16">
+            <TextBlock Text="{Binding Title}"
+                    Style="{StaticResource SectionTitle}"
+                    FontSize="22"/>
+            <TextBlock Text="{Binding GroupName}"
+                    FontWeight="SemiBold"
+                    TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding GroupId}"
+                    Style="{StaticResource ResourceIdentifier}"/>
+            <TextBlock Text="{Binding RuleId}"
+                    Style="{StaticResource ResourceIdentifier}"
+                    Visibility="{Binding IsEditing, Converter={StaticResource VisibleWhenTrue}}"/>
         </StackPanel>
-    </StackPanel>
+        <ScrollViewer Grid.Row="1"
+                VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="0,0,12,8">
+                <TextBlock Text="Sens du trafic"
+                        Style="{StaticResource FieldLabel}"/>
+                <StackPanel Orientation="Horizontal"
+                        Margin="0,0,0,16"
+                        IsEnabled="{Binding CanChangeDirection}">
+                    <RadioButton x:Name="IngressInput"
+                            Content="Entrée"
+                            IsChecked="{Binding IsIngress}"
+                            GroupName="Direction"
+                            Margin="0,0,24,0"/>
+                    <RadioButton x:Name="EgressInput"
+                            Content="Sortie"
+                            IsChecked="{Binding IsEgress}"
+                            GroupName="Direction"/>
+                </StackPanel>
+                <Grid Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Préréglage"
+                                Style="{StaticResource FieldLabel}"/>
+                        <ComboBox x:Name="PresetInput"
+                                ItemsSource="{Binding Presets}"
+                                SelectedItem="{Binding SelectedPreset}"
+                                DisplayMemberPath="Name"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Protocole"
+                                Style="{StaticResource FieldLabel}"/>
+                        <ComboBox x:Name="ProtocolInput"
+                                ItemsSource="{Binding Protocols}"
+                                DisplayMemberPath="Name"
+                                SelectedValuePath="Id"
+                                SelectedValue="{Binding Protocol}"/>
+                    </StackPanel>
+                </Grid>
+                <StackPanel Margin="0,0,0,14"
+                        Visibility="{Binding IsCustomProtocol, Converter={StaticResource VisibleWhenTrue}}">
+                    <TextBlock Text="Numéro de protocole IP"
+                            Style="{StaticResource FieldLabel}"/>
+                    <TextBox Text="{Binding ProtocolNumber, UpdateSourceTrigger=PropertyChanged}"
+                            Width="140"
+                            HorizontalAlignment="Left"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,0,14"
+                        Visibility="{Binding HasPorts, Converter={StaticResource VisibleWhenTrue}}">
+                    <CheckBox Content="{Binding AllPortsLabel}"
+                            IsChecked="{Binding AllPorts}"
+                            Margin="0,0,0,10"/>
+                    <Grid IsEnabled="{Binding CanEditPorts}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="{Binding FromLabel}"
+                                    Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="FromInput"
+                                    Text="{Binding From, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="{Binding ToLabel}"
+                                    Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="ToInput"
+                                    Text="{Binding To, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+                <TextBlock Text="{Binding SourceLabel}"
+                        Style="{StaticResource FieldLabel}"/>
+                <ComboBox x:Name="SourceKindInput"
+                        ItemsSource="{Binding SourceKinds}"
+                        DisplayMemberPath="Name"
+                        SelectedValuePath="Id"
+                        SelectedValue="{Binding SourceKind}"
+                        Margin="0,0,0,10"/>
+                <StackPanel Visibility="{Binding IsManualSource, Converter={StaticResource VisibleWhenTrue}}"
+                        Margin="0,0,0,14">
+                    <TextBlock Text="{Binding SourceValueLabel}"
+                            Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="SourceInput"
+                            Text="{Binding Source, UpdateSourceTrigger=PropertyChanged}"
+                            FontFamily="Cascadia Mono, Consolas"/>
+                </StackPanel>
+                <StackPanel Visibility="{Binding IsGroupSource, Converter={StaticResource VisibleWhenTrue}}"
+                        Margin="0,0,0,14">
+                    <TextBlock Text="Groupe de sécurité"
+                            Style="{StaticResource FieldLabel}"/>
+                    <ComboBox x:Name="GroupInput"
+                            ItemsSource="{Binding KnownGroups}"
+                            IsEditable="True"
+                            TextSearch.TextPath="Id"
+                            Text="{Binding Source, UpdateSourceTrigger=PropertyChanged}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayName}"
+                                        TextTrimming="CharacterEllipsis"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+                <TextBlock Text="Description"
+                        Style="{StaticResource FieldLabel}"/>
+                <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                        TextWrapping="Wrap"
+                        AcceptsReturn="False"/>
+            </StackPanel>
+        </ScrollViewer>
+        <StackPanel Grid.Row="2"
+                Margin="0,8,0,0">
+            <TextBlock Text="{Binding Summary}"
+                    Style="{StaticResource OptionalMessage}"
+                    FontFamily="Cascadia Mono, Consolas"
+                    FontSize="12"/>
+            <TextBlock Text="{Binding ExposureWarning}"
+                    Style="{StaticResource OptionalMessage}"
+                    Foreground="Firebrick"
+                    FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding ValidationMessage}"
+                    Style="{StaticResource OptionalMessage}"
+                    Foreground="Firebrick"/>
+            <Border BorderBrush="{StaticResource LineBrush}"
+                    BorderThickness="0,1,0,0"
+                    Margin="0,16,0,0"
+                    Padding="0,16,0,0">
+                <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                    <Button Content="Annuler"
+                            Style="{StaticResource ActionButton}"
+                            Margin="0,0,10,0"
+                            IsCancel="True"/>
+                    <Button x:Name="ContinueButton"
+                            Click="OkButton_Click"
+                            IsEnabled="{Binding CanSubmit}"
+                            IsDefault="True">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Check"
+                                    Margin="0,0,6,0"/>
+                            <TextBlock Text="Continuer"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
 </Window>

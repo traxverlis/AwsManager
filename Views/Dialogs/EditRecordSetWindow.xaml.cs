@@ -25,10 +25,15 @@ namespace AwsManager.Views.Dialogs
         }
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
-            // This sets the DialogResult to true, which can be checked by the calling code.
-            // The window will be closed automatically by setting IsDefault="True" on the button
-            // when DialogResult is set.
-            DialogResult = true;
+            try
+            {
+                if (DataContext is not AwsManager.ViewModels.EditRecordSetViewModel editor) return;
+                if (FormValidation.HasErrors(this))
+                    throw new ArgumentException("Corrigez les champs invalides.");
+                editor.BuildRecord();
+                DialogResult = true;
+            }
+            catch (ArgumentException exception) { ValidationText.Text = exception.Message; }
         }
     }
 }

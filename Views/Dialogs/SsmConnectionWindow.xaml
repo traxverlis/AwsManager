@@ -6,71 +6,129 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:viewmodels="clr-namespace:AwsManager.ViewModels"
         mc:Ignorable="d"
-        Title="SSM Connection" Height="Auto" Width="600"
+        Title="Connexion SSM"
+        Height="Auto"
+        Width="640"
+        MaxHeight="800"
         d:DataContext="{d:DesignInstance Type=viewmodels:SsmConnectionViewModel, IsDesignTimeCreatable=True}"
-        WindowStartupLocation="CenterOwner" SizeToContent="Height">
+        WindowStartupLocation="CenterOwner"
+        SizeToContent="Height">
     <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
-    <StackPanel Margin="16">
-        <TextBlock Text="SSM Connection" Style="{StaticResource MaterialDesignHeadline5TextBlock}" />
-        <TextBlock Margin="0,5,0,0">
-            <Run Text="Target Instance:"/>
-            <Run Text="{Binding TargetInstance.Name}" FontWeight="Bold"/>
+    <StackPanel x:Name="ConnectionForm" Margin="24">
+        <TextBlock Text="Connexion SSM"
+                   FontFamily="{StaticResource HeadingFont}"
+                   FontSize="22"
+                   FontWeight="SemiBold"/>
+        <TextBlock Margin="0,5,0,0" Foreground="{StaticResource MutedInkBrush}">
+            <Run Text="Instance : "/>
+            <Run Text="{Binding TargetInstance.Name}"
+                 FontWeight="Bold"/>
             <Run Text="("/><Run Text="{Binding TargetInstance.InstanceId}"/><Run Text=")"/>
         </TextBlock>
 
-        <TabControl Margin="0,20,0,0">
+        <Grid Margin="0,18,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="42"/><ColumnDefinition Width="42"/></Grid.ColumnDefinitions>
+            <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}" DisplayMemberPath="Name" materialDesign:HintAssist.Hint="Configuration enregistrée"/>
+            <Button Grid.Column="1" Command="{Binding NewPresetCommand}" Style="{StaticResource IconButton}" ToolTip="Nouvelle configuration"><materialDesign:PackIcon Kind="Plus"/></Button>
+            <Button Grid.Column="2" Command="{Binding DeletePresetCommand}" Style="{StaticResource IconButton}" ToolTip="Supprimer la configuration"><materialDesign:PackIcon Kind="DeleteOutline"/></Button>
+        </Grid>
+        <TabControl Margin="0,20,0,0" SelectedIndex="{Binding SelectedMode}">
             <!-- SSH Tab -->
-            <TabItem Header="SSH" Visibility="{Binding IsLinux, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <StackPanel Margin="10">
-                    <TextBlock Text="Start a direct SSH session into the instance." TextWrapping="Wrap" Margin="0,0,0,20"/>
-                    <Button Content="Start SSH Session" Command="{Binding StartSshCommand}" HorizontalAlignment="Left"/>
+            <TabItem Header="Terminal SSM">
+                <StackPanel Margin="0,20">
+                    <Button
+                            Command="{Binding StartSshCommand}"
+                            HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal"><materialDesign:PackIcon Kind="Console" Width="16" Height="16" Margin="0,0,8,0"/><TextBlock Text="Ouvrir le terminal"/></StackPanel>
+                    </Button>
                 </StackPanel>
             </TabItem>
 
             <!-- RDP Tab -->
-            <TabItem Header="RDP" Visibility="{Binding IsWindows, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <StackPanel Margin="10">
-                    <TextBlock Text="Create a secure tunnel to the instance for Remote Desktop." TextWrapping="Wrap" Margin="0,0,0,20"/>
+            <TabItem Header="RDP"
+                     Visibility="{Binding IsWindows, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel x:Name="RdpForm"
+                    Margin="0,20">
                     <StackPanel Orientation="Horizontal">
-                        <TextBox Text="{Binding RdpRemotePort}" materialDesign:HintAssist.Hint="Remote Port" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="5" Width="100"/>
-                        <TextBox Text="{Binding RdpLocalPort}" materialDesign:HintAssist.Hint="Local Port" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="5" Width="100"/>
+                        <TextBox x:Name="RdpRemoteInput"
+                                Text="{Binding RdpRemotePort, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                                 materialDesign:HintAssist.Hint="Port distant"
+                                 Style="{StaticResource FormField}"
+                                 Margin="0,0,16,0"
+                                 Width="180"/>
+                        <TextBox Text="{Binding RdpLocalPort, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                                 materialDesign:HintAssist.Hint="Port local"
+                                 Style="{StaticResource FormField}"
+                                 Width="180"/>
                     </StackPanel>
-                    <Button Content="Start RDP Tunnel" Command="{Binding StartRdpTunnelCommand}" HorizontalAlignment="Left" Margin="5,20,0,0"/>
+                    <Button Content="Ouvrir le bureau distant"
+                            Command="{Binding StartRdpTunnelCommand}"
+                            CommandParameter="{Binding ElementName=RdpForm}"
+                            HorizontalAlignment="Left"
+                            Margin="0,20,0,0"/>
                 </StackPanel>
             </TabItem>
 
             <!-- Custom Port Forwarding Tab -->
-            <TabItem Header="Port Forwarding">
-                <Grid Margin="10">
+            <TabItem Header="Tunnels personnalisés">
+                <Grid Margin="0,20">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <DataGrid ItemsSource="{Binding CustomRules}" AutoGenerateColumns="False" CanUserAddRows="False">
+                    <DataGrid x:Name="CustomForm"
+                            ItemsSource="{Binding CustomRules}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              MaxHeight="300">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Remote Port" Binding="{Binding RemotePort}"/>
-                            <DataGridTextColumn Header="Local Port" Binding="{Binding LocalPort}"/>
-                            <DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Port distant"
+                                                Width="*"
+                                                Binding="{Binding RemotePort, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
+                            <DataGridTextColumn Header="Port local"
+                                                Width="*"
+                                                Binding="{Binding LocalPort, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
+                            <DataGridTemplateColumn Width="60">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}"
-                                                Style="{StaticResource MaterialDesignIconButton}">
-                                            <materialDesign:PackIcon Kind="Delete" />
+                                                ToolTip="Supprimer le tunnel" Style="{StaticResource IconButton}">
+                                            <materialDesign:PackIcon Kind="Delete"/>
                                         </Button>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
-                        <Button Content="Add Rule" Command="{Binding AddRuleCommand}"/>
-                        <Button Content="Start Tunnels" Command="{Binding StartCustomTunnelCommand}" Margin="10,0,0,0"/>
+                    <StackPanel Grid.Row="1"
+                                Orientation="Horizontal"
+                                Margin="0,10,0,0">
+                        <Button Content="Ajouter"
+                            Style="{StaticResource ActionButton}"
+                                Command="{Binding AddRuleCommand}"/>
+                        <Button Content="Ouvrir les tunnels"
+                                Command="{Binding StartCustomTunnelCommand}"
+                                CommandParameter="{Binding ElementName=CustomForm}"
+                                Margin="10,0,0,0"/>
                     </StackPanel>
                 </Grid>
             </TabItem>
         </TabControl>
+        <Grid Margin="0,8,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+            <TextBox Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Nom de la configuration" MaxLength="100"/>
+            <Button Grid.Column="1" Command="{Binding SavePresetCommand}" CommandParameter="{Binding ElementName=ConnectionForm}" ToolTip="Enregistrer la configuration" Style="{StaticResource IconButton}"><materialDesign:PackIcon Kind="ContentSaveOutline"/></Button>
+        </Grid>
+        <TextBlock Text="{Binding Status}"
+                   TextWrapping="Wrap"
+                   Margin="0,16,0,0"/>
+        <Button Command="{Binding CancelCommand}"
+            Style="{StaticResource ActionButton}"
+                Content="Annuler la connexion"
+                HorizontalAlignment="Right"
+                Margin="0,12,0,0"/>
     </StackPanel>
 </Window>

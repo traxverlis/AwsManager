@@ -1,0 +1,155 @@
+<Window x:Class="AwsManager.Views.Dialogs.RdsTunnelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Connexion RDS via SSM"
+        Width="680"
+        SizeToContent="Height"
+        MaxHeight="820"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="ConnectionForm"
+                Margin="24">
+            <DockPanel>
+                <Button DockPanel.Dock="Right"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource IconButton}"
+                        ToolTip="Actualiser la base et les relais">
+                    <materialDesign:PackIcon Kind="Refresh"/>
+                </Button>
+                <StackPanel>
+                    <TextBlock Text="Connexion RDS"
+                            Style="{StaticResource SectionTitle}"
+                            FontSize="22"/>
+                    <TextBlock Text="{Binding Database.DbInstanceIdentifier}"
+                            Style="{StaticResource ResourceIdentifier}"/>
+                </StackPanel>
+            </DockPanel>
+            <TextBlock Text="Configuration enregistrée"
+                    Style="{StaticResource FieldLabel}"
+                    Margin="0,16,0,4"/>
+            <Grid Margin="0,0,0,16"
+                    IsEnabled="{Binding CanConfigure}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="42"/>
+                    <ColumnDefinition Width="42"/>
+                </Grid.ColumnDefinitions>
+                <ComboBox ItemsSource="{Binding Presets}"
+                        SelectedItem="{Binding SelectedPreset}"
+                        DisplayMemberPath="Name"/>
+                <Button Grid.Column="1"
+                        Command="{Binding NewPresetCommand}"
+                        ToolTip="Nouvelle configuration"
+                        Style="{StaticResource IconButton}">
+                    <materialDesign:PackIcon Kind="Plus"/>
+                </Button>
+                <Button Grid.Column="2"
+                        Command="{Binding DeletePresetCommand}"
+                        ToolTip="Supprimer la configuration"
+                        Style="{StaticResource IconButton}">
+                    <materialDesign:PackIcon Kind="DeleteOutline"/>
+                </Button>
+            </Grid>
+            <TextBlock Text="Base distante"
+                    Style="{StaticResource FieldLabel}"/>
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="100"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Text="{Binding Target.Host, Mode=OneWay}"
+                        IsReadOnly="True"
+                        FontFamily="Cascadia Mono, Consolas"
+                        FontSize="12"
+                        ToolTip="{Binding Target.Host}"/>
+                <TextBox Grid.Column="2"
+                        Text="{Binding Target.Port, Mode=OneWay}"
+                        IsReadOnly="True"
+                        ToolTip="Port distant"/>
+            </Grid>
+            <TextBlock Text="Relais EC2"
+                    Style="{StaticResource FieldLabel}"/>
+            <ComboBox ItemsSource="{Binding Relays}"
+                    SelectedItem="{Binding SelectedRelay}"
+                    DisplayMemberPath="DisplayName"
+                    IsEnabled="{Binding CanConfigure}"
+                    Margin="0,0,0,16"
+                    ToolTip="{Binding SelectedRelay.DisplayName}"/>
+            <TextBlock Text="Port local"
+                    Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="LocalPortInput"
+                    Text="{Binding LocalPort, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                    IsEnabled="{Binding CanConfigure}"
+                    Width="160"
+                    HorizontalAlignment="Left"/>
+            <WrapPanel Margin="0,16,0,16">
+                <Button Command="{Binding OpenCommand}"
+                        CommandParameter="{Binding ElementName=ConnectionForm}"
+                        Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="LanConnect"
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,8,0"/>
+                        <TextBlock Text="Ouvrir le tunnel"/>
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding StopCommand}"
+                        ToolTip="Fermer ce tunnel"
+                        Style="{StaticResource IconButton}">
+                    <materialDesign:PackIcon Kind="Stop"/>
+                </Button>
+                <Button Command="{Binding CancelCommand}"
+                        ToolTip="Annuler l'ouverture"
+                        Style="{StaticResource IconButton}">
+                    <materialDesign:PackIcon Kind="Close"/>
+                </Button>
+            </WrapPanel>
+            <TextBlock Text="Adresse locale"
+                    Style="{StaticResource FieldLabel}"/>
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="48"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Text="{Binding LocalAddress, Mode=OneWay}"
+                        IsReadOnly="True"
+                        FontFamily="Cascadia Mono, Consolas"/>
+                <Button Grid.Column="1"
+                        Command="{Binding CopyAddressCommand}"
+                        ToolTip="Copier l'adresse locale"
+                        Style="{StaticResource IconButton}">
+                    <materialDesign:PackIcon Kind="ContentCopy"/>
+                </Button>
+            </Grid>
+            <TextBlock Text="Nom de la configuration"
+                    Style="{StaticResource FieldLabel}"/>
+            <Grid IsEnabled="{Binding CanConfigure}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="48"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}"
+                        MaxLength="100"/>
+                <Button Grid.Column="1"
+                        Command="{Binding SavePresetCommand}"
+                        CommandParameter="{Binding ElementName=ConnectionForm}"
+                        ToolTip="Enregistrer l'accès RDS"
+                        Style="{StaticResource IconButton}">
+                    <materialDesign:PackIcon Kind="ContentSaveOutline"/>
+                </Button>
+            </Grid>
+            <TextBlock Text="{Binding Status}"
+                    TextWrapping="Wrap"
+                    Margin="0,12,0,0"/>
+            <Button Content="Fermer"
+                    IsCancel="True"
+                    Style="{StaticResource ActionButton}"
+                    HorizontalAlignment="Right"
+                    Margin="0,16,0,0"/>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

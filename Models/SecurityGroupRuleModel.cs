@@ -2,6 +2,8 @@ namespace AwsManager.Models
 {
     public class SecurityGroupRuleModel
     {
+        public string RuleId { get; set; } = string.Empty;
+        public string GroupId { get; set; } = string.Empty;
         public string Type { get; set; } = "Ingress"; // or Egress
         public string Protocol { get; set; } = string.Empty;
         public string PortRange { get; set; } = string.Empty;

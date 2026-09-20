@@ -9,9 +9,31 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=viewmodels:SecurityGroupViewModel, IsDesignTimeCreatable=True}"
              d:DesignHeight="600"
-        d:DesignWidth="1000">
+             d:DesignWidth="1000">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <DataTemplate x:Key="RuleActions">
+            <StackPanel Orientation="Horizontal">
+                <Button Command="{Binding DataContext.EditRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding}"
+                        ToolTip="Modifier la règle"
+                        Style="{StaticResource IconButton}"
+                        Width="32"
+                        Height="32"
+                        Padding="4">
+                    <materialDesign:PackIcon Kind="PencilOutline"/>
+                </Button>
+                <Button Command="{Binding DataContext.DeleteRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding}"
+                        ToolTip="Supprimer la règle"
+                        Style="{StaticResource IconButton}"
+                        Width="32"
+                        Height="32"
+                        Padding="4">
+                    <materialDesign:PackIcon Kind="DeleteOutline"/>
+                </Button>
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -19,42 +41,57 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal"
-                Margin="5">
-            <Button Content="Refresh"
-                    Command="{Binding RefreshCommand}"/>
-            <TextBlock Text="Loading..."
-                    VerticalAlignment="Center"
-                    Margin="10,0"
-                    Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        <StackPanel Margin="0,0,0,8">
+            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                     Style="{StaticResource SearchField}"/>
+            <WrapPanel>
+                <Button Command="{Binding RefreshCommand}"
+                        ToolTip="Actualiser"
+                        Style="{StaticResource ToolButton}">
+                    <materialDesign:PackIcon Kind="Refresh"/>
+                </Button>
+                <Button Content="Ajouter une règle"
+                        Command="{Binding AddRuleCommand}"
+                        Style="{StaticResource PrimaryButton}"
+                        Margin="0,0,0,6"/>
+            </WrapPanel>
+            <ProgressBar IsIndeterminate="True"
+                         Height="3"
+                         Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         </StackPanel>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="400"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="2*"
+                                  MinWidth="220"/>
+                <ColumnDefinition Width="3*"/>
             </Grid.ColumnDefinitions>
 
             <ListView Grid.Column="0"
-                    ItemsSource="{Binding SecurityGroups}"
-                    SelectedItem="{Binding SelectedSecurityGroup}"
-                      Style="{StaticResource MaterialDesignListView}">
+                      ItemsSource="{Binding FilteredItems}"
+                      SelectedItem="{Binding SelectedSecurityGroup}"
+                      Style="{StaticResource ResourceList}"
+                      Margin="0,0,16,0">
                 <ListView.ItemTemplate>
                     <DataTemplate>
-                        <StackPanel Margin="5">
+                        <StackPanel>
                             <TextBlock Text="{Binding GroupName}"
-                                    FontWeight="Bold"/>
+                                       Style="{StaticResource ResourceName}"/>
                             <TextBlock Text="{Binding GroupId}"
-                                    Foreground="Gray"/>
+                                       Style="{StaticResource ResourceIdentifier}"
+                                       Margin="0,4,0,0"/>
                             <TextBlock Text="{Binding Description}"
-                                    TextWrapping="Wrap"/>
+                                       Foreground="{StaticResource MutedInkBrush}"
+                                       FontSize="12"
+                                       Margin="0,6,0,0"
+                                       TextWrapping="Wrap"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
 
             <Grid Grid.Column="1"
-                    DataContext="{Binding SelectedSecurityGroup}">
+                  DataContext="{Binding SelectedSecurityGroup}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -62,36 +99,44 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Ingress Rules"
-                               Style="{StaticResource MaterialDesignHeadline6TextBlock}"
-                               Margin="5"/>
-                    <Button Content="Add Rule" 
-                            Command="{Binding DataContext.AddRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            Margin="10,0"
+                <DockPanel Grid.Row="0"
+                        Margin="0,0,0,8">
+                    <Button DockPanel.Dock="Right"
+                            Command="{Binding DataContext.AddRuleCommand, ElementName=SecurityGroupViewControl}"
+                            CommandParameter="Ingress"
+                            Style="{StaticResource IconButton}"
+                            ToolTip="Ajouter une règle entrante">
+                        <materialDesign:PackIcon Kind="Plus"/>
+                    </Button>
+                    <TextBlock Text="Entrées"
+                               Style="{StaticResource SectionTitle}"
+                               Margin="5"
                             VerticalAlignment="Center"/>
-                </StackPanel>
+                </DockPanel>
 
                 <DataGrid Grid.Row="1"
-          ItemsSource="{Binding IngressRules}"
-          Tag="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"
-          AutoGenerateColumns="False"
-          IsReadOnly="True">
+                          RowHeight="48"
+                          Style="{StaticResource ResourceGrid}"
+                          ItemsSource="{Binding IngressRules}"
+                          Tag="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True">
                     <DataGrid.RowStyle>
-                        <Style TargetType="DataGridRow">
-                            <Setter Property="Tag" 
-                Value="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"/>
+                        <Style TargetType="DataGridRow"
+                               BasedOn="{StaticResource ResourceRow}">
+                            <Setter Property="Tag"
+                                    Value="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"/>
                             <Setter Property="ContextMenu">
                                 <Setter.Value>
                                     <ContextMenu>
                                         <MenuItem Header="Delete"
-                              Command="{Binding PlacementTarget.Tag.DeleteRuleCommand,
+                                                  Command="{Binding PlacementTarget.Tag.DeleteRuleCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                              CommandParameter="{Binding}"/>
+                                                  CommandParameter="{Binding}"/>
                                         <MenuItem Header="Edit"
-                              Command="{Binding PlacementTarget.Tag.EditRuleCommand,
+                                                  Command="{Binding PlacementTarget.Tag.EditRuleCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                              CommandParameter="{Binding}"/>
+                                                  CommandParameter="{Binding}"/>
                                     </ContextMenu>
                                 </Setter.Value>
                             </Setter>
@@ -99,59 +144,77 @@
 
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Protocol"
+                        <DataGridTemplateColumn CellTemplate="{StaticResource RuleActions}"
+                                                Width="100"/>
+                        <DataGridTextColumn Header="Protocole"
                                             Binding="{Binding Protocol}"/>
-                        <DataGridTextColumn Header="Port Range"
+                        <DataGridTextColumn Header="Ports"
                                             Binding="{Binding PortRange}"/>
                         <DataGridTextColumn Header="Source"
                                             Binding="{Binding SourceOrDestination}"
                                             Width="*"/>
                         <DataGridTextColumn Header="Description"
-                                            Binding="{Binding Description}"
-                                            />
+                                            Binding="{Binding Description}"/>
                     </DataGrid.Columns>
                 </DataGrid>
 
-                <TextBlock Grid.Row="2"
-                           Text="Egress Rules"
-                           Style="{StaticResource MaterialDesignHeadline6TextBlock}"
-                           Margin="5"/>
+                <DockPanel Grid.Row="2"
+                        Margin="0,16,0,8">
+                    <Button DockPanel.Dock="Right"
+                            Command="{Binding DataContext.AddRuleCommand, ElementName=SecurityGroupViewControl}"
+                            CommandParameter="Egress"
+                            Style="{StaticResource IconButton}"
+                            ToolTip="Ajouter une règle sortante">
+                        <materialDesign:PackIcon Kind="Plus"/>
+                    </Button>
+                    <TextBlock Text="Sorties"
+                            Style="{StaticResource SectionTitle}"
+                            Margin="5"
+                            VerticalAlignment="Center"/>
+                </DockPanel>
                 <DataGrid Grid.Row="3"
-          ItemsSource="{Binding EgressRules}"
-          Tag="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"
-          AutoGenerateColumns="False"
-          IsReadOnly="True">
+                          RowHeight="48"
+                          Style="{StaticResource ResourceGrid}"
+                          ItemsSource="{Binding EgressRules}"
+                          Tag="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True">
                     <DataGrid.RowStyle>
-                        <Style TargetType="DataGridRow">
-                            <Setter Property="Tag" 
-                Value="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"/>
+                        <Style TargetType="DataGridRow"
+                               BasedOn="{StaticResource ResourceRow}">
+                            <Setter Property="Tag"
+                                    Value="{Binding ElementName=SecurityGroupViewControl, Path=DataContext}"/>
                             <Setter Property="ContextMenu">
                                 <Setter.Value>
                                     <ContextMenu>
                                         <MenuItem Header="Delete"
-                              Command="{Binding PlacementTarget.Tag.DeleteRuleCommand,
+                                                  Command="{Binding PlacementTarget.Tag.DeleteRuleCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                              CommandParameter="{Binding}"/>
+                                                  CommandParameter="{Binding}"/>
                                         <MenuItem Header="Edit"
-                              Command="{Binding PlacementTarget.Tag.EditRuleCommand,
+                                                  Command="{Binding PlacementTarget.Tag.EditRuleCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                              CommandParameter="{Binding}"/>
+                                                  CommandParameter="{Binding}"/>
                                     </ContextMenu>
                                 </Setter.Value>
                             </Setter>
                         </Style>
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Protocol"
-                                Binding="{Binding Protocol}"/>
-                        <DataGridTextColumn Header="Port Range"
-                                Binding="{Binding PortRange}"/>
+                        <DataGridTemplateColumn CellTemplate="{StaticResource RuleActions}"
+                                                Width="100"/>
+                        <DataGridTextColumn Header="Protocole"
+                                            Binding="{Binding Protocol}"/>
+                        <DataGridTextColumn Header="Ports"
+                                            Binding="{Binding PortRange}"/>
                         <DataGridTextColumn Header="Destination"
-                                Binding="{Binding SourceOrDestination}"
-                                Width="*"/>
+                                            Binding="{Binding SourceOrDestination}"
+                                            Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
         </Grid>
+        <TextBlock Grid.Row="1"
+                   Style="{StaticResource ResourceEmptyState}"/>
     </Grid>
 </UserControl>

@@ -1,5 +1,5 @@
 <UserControl x:Class="AwsManager.Views.AutoScalingView"
-                          x:Name="AutoScalingViewControl"
+             x:Name="AutoScalingViewControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -9,7 +9,7 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=viewmodels:AutoScalingViewModel, IsDesignTimeCreatable=True}"
              d:DesignHeight="600"
-        d:DesignWidth="1000">
+             d:DesignWidth="1000">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </UserControl.Resources>
@@ -20,34 +20,46 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal"
-                Margin="5">
-            <Button Content="Refresh"
-                    Command="{Binding RefreshCommand}"/>
-            <TextBlock Text="Loading..."
-                    VerticalAlignment="Center"
-                    Margin="10,0"
-                    Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        <StackPanel Margin="0,0,0,8">
+            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                     Style="{StaticResource SearchField}"/>
+            <WrapPanel>
+                <Button Command="{Binding RefreshCommand}"
+                        Style="{StaticResource ToolButton}"
+                        ToolTip="Actualiser">
+                    <materialDesign:PackIcon Kind="Refresh"/>
+                </Button>
+                <Button Content="Tags"
+                        Command="{Binding EditTagsCommand}"
+                        Style="{StaticResource ToolButton}"/>
+                <Button Content="Actions planifiées"
+                        Command="{Binding DescribeScheduleCommand}"
+                        Style="{StaticResource ToolButton}"/>
+            </WrapPanel>
+            <ProgressBar IsIndeterminate="True"
+                         Height="3"
+                         Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         </StackPanel>
 
         <DataGrid Grid.Row="1"
-                ItemsSource="{Binding AutoScalingGroups}"
-                SelectedItem="{Binding SelectedGroup}"
+                  ItemsSource="{Binding FilteredItems}"
+                  SelectedItem="{Binding SelectedGroup}"
                   AutoGenerateColumns="False"
-                IsReadOnly="True"
-                CanUserAddRows="False"
-                  Style="{StaticResource MaterialDesignDataGrid}">
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  Style="{StaticResource ResourceGrid}">
             <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow" >
-                    <Setter Property="Tag" 
-                Value="{Binding ElementName=AutoScalingViewControl, Path=DataContext}"/>
+                <Style TargetType="DataGridRow"
+                        BasedOn="{StaticResource ResourceRow}">
+                    <Setter Property="Tag"
+                            Value="{Binding ElementName=AutoScalingViewControl, Path=DataContext}"/>
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <ContextMenu>
-                                <MenuItem Header="Edit Tags"
-                              Command="{Binding PlacementTarget.Tag.EditTagsCommand,
+                                <MenuItem Header="Modifier les tags"
+                                          Command="{Binding PlacementTarget.Tag.EditTagsCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                              CommandParameter="{Binding}"/>
+                                          CommandParameter="{Binding}"/>
                             </ContextMenu>
 
                         </Setter.Value>
@@ -55,65 +67,96 @@
                 </Style>
             </DataGrid.RowStyle>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Name"
-                        Binding="{Binding AutoScalingGroupName}"
-                        Width="*"/>
+                <DataGridTextColumn Header="Nom"
+                                    ElementStyle="{StaticResource ResourceName}"
+                                    Binding="{Binding AutoScalingGroupName}"
+                                    Width="*"/>
                 <DataGridTextColumn Header="Min"
-                        Binding="{Binding MinSize}"/>
+                                    Binding="{Binding MinSize}"/>
                 <DataGridTextColumn Header="Max"
-                        Binding="{Binding MaxSize}"/>
-                <DataGridTextColumn Header="Desired"
-                        Binding="{Binding DesiredCapacity}"/>
+                                    Binding="{Binding MaxSize}"/>
+                <DataGridTextColumn Header="Cible"
+                                    Binding="{Binding DesiredCapacity}"/>
                 <DataGridTextColumn Header="Instances"
-                        Binding="{Binding InstanceCount}"/>
-                <DataGridTextColumn Header="Status"
-                        Binding="{Binding Status}"/>
+                                    Binding="{Binding InstanceCount}"/>
+                <DataGridTextColumn Header="État"
+                                    Binding="{Binding Status}"/>
             </DataGrid.Columns>
         </DataGrid>
+        <TextBlock Grid.Row="1"
+                   Style="{StaticResource ResourceEmptyState}"/>
 
-        <materialDesign:Card Grid.Row="2"
-                Margin="5"
-                Padding="10">
-            <materialDesign:Card.Style>
-                <Style TargetType="materialDesign:Card"
-                        BasedOn="{StaticResource {x:Type materialDesign:Card}}">
+        <Border Grid.Row="2"
+                Margin="0,16,0,0"
+                Padding="16"
+                Background="#EAF0F4"
+                BorderBrush="{StaticResource LineBrush}"
+                BorderThickness="0,1,0,0">
+            <Border.Style>
+                <Style TargetType="Border">
                     <Setter Property="Visibility"
                             Value="Visible"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding SelectedGroup}"
-                                Value="{x:Null}">
+                                     Value="{x:Null}">
                             <Setter Property="Visibility"
                                     Value="Collapsed"/>
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
-            </materialDesign:Card.Style>
+            </Border.Style>
             <StackPanel>
-                <TextBlock Text="Edit Selected Group"
-                        Style="{StaticResource MaterialDesignHeadline6TextBlock}"
-                        Margin="0,0,0,10"/>
+                <TextBlock Text="Capacité du groupe sélectionné"
+                           Style="{StaticResource SectionTitle}"
+                           Margin="0,0,0,10"/>
                 <StackPanel Orientation="Horizontal">
-                    <TextBox Text="{Binding NewMinSize, UpdateSourceTrigger=PropertyChanged}"
-                            materialDesign:HintAssist.Hint="Min Size"
-                            Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                            Margin="5"
-                            Width="80"/>
-                    <TextBox Text="{Binding NewMaxSize, UpdateSourceTrigger=PropertyChanged}"
-                            materialDesign:HintAssist.Hint="Max Size"
-                            Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                            Margin="5"
-                            Width="80"/>
-                    <TextBox Text="{Binding NewDesiredCapacity, UpdateSourceTrigger=PropertyChanged}"
-                            materialDesign:HintAssist.Hint="Desired"
-                            Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                            Margin="5"
-                            Width="80"/>
-                    <Button Content="Update"
+                    <TextBox x:Name="MinimumInput"
+                             Text="{Binding NewMinSize, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                             materialDesign:HintAssist.Hint="Minimum"
+                             Style="{StaticResource FormField}"
+                             Margin="0,0,12,0"
+                             Width="104"/>
+                    <TextBox x:Name="MaximumInput"
+                             Text="{Binding NewMaxSize, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                             materialDesign:HintAssist.Hint="Maximum"
+                             Style="{StaticResource FormField}"
+                             Margin="0,0,12,0"
+                             Width="104"/>
+                    <TextBox x:Name="DesiredInput"
+                             Text="{Binding NewDesiredCapacity, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                             materialDesign:HintAssist.Hint="Cible"
+                             Style="{StaticResource FormField}"
+                             Margin="0,0,12,0"
+                             Width="104"/>
+                    <Button Content="Appliquer"
                             Command="{Binding UpdateGroupCommand}"
                             Margin="10,0"
-                            VerticalAlignment="Center"/>
+                            VerticalAlignment="Center">
+                        <Button.Style>
+                            <Style TargetType="Button"
+                                   BasedOn="{StaticResource PrimaryButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ElementName=MinimumInput, Path=(Validation.HasError)}"
+                                                 Value="True">
+                                        <Setter Property="IsEnabled"
+                                                Value="False"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ElementName=MaximumInput, Path=(Validation.HasError)}"
+                                                 Value="True">
+                                        <Setter Property="IsEnabled"
+                                                Value="False"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ElementName=DesiredInput, Path=(Validation.HasError)}"
+                                                 Value="True">
+                                        <Setter Property="IsEnabled"
+                                                Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                 </StackPanel>
             </StackPanel>
-        </materialDesign:Card>
+        </Border>
     </Grid>
 </UserControl>

@@ -2,14 +2,16 @@
              x:Name="EC2ViewControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:viewmodels="clr-namespace:AwsManager.ViewModels"
-             mc:Ignorable="d" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=viewmodels:Ec2ViewModel, IsDesignTimeCreatable=True}"
-             d:DesignHeight="600" d:DesignWidth="1000">
+             d:DesignHeight="600"
+             d:DesignWidth="1000">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -17,109 +19,148 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Bandeau des actions -->
-        <Grid Grid.Row="0" Margin="5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <!-- Boutons gauche -->
-                <ColumnDefinition Width="*"/>
-                <!-- Espace flexible -->
-                <ColumnDefinition Width="Auto"/>
-                <!-- Bouton droite -->
-            </Grid.ColumnDefinitions>
+        <StackPanel Margin="0,0,0,8">
+            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                     Style="{StaticResource SearchField}"/>
+            <WrapPanel>
+                <Button Command="{Binding RefreshCommand}"
+                        Style="{StaticResource ToolButton}"
+                        ToolTip="Actualiser">
+                    <materialDesign:PackIcon Kind="Refresh"/>
+                </Button>
+                <Button Command="{Binding ConnectCommand}"
+                        Style="{StaticResource PrimaryButton}"
+                        Height="36"
+                        Margin="0,0,8,6">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Console"
+                                                 Width="16"
+                                                 Height="16"
+                                                 Margin="0,0,8,0"/>
+                        <TextBlock Text="Connexion SSM"/>
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding StartInstanceCommand}"
+                        ToolTip="Démarrer"
+                        Style="{StaticResource ToolButton}">
+                    <materialDesign:PackIcon Kind="Play"/>
+                </Button>
+                <Button Command="{Binding StopInstanceCommand}"
+                        ToolTip="Arrêter"
+                        Style="{StaticResource ToolButton}">
+                    <materialDesign:PackIcon Kind="Stop"/>
+                </Button>
+                <Button Content="Détails"
+                        Command="{Binding ViewDetailsCommand}"
+                        Style="{StaticResource ToolButton}"/>
+                <Button Content="Tags"
+                        Command="{Binding EditTagsCommand}"
+                        Style="{StaticResource ToolButton}"/>
+                <Button Command="{Binding ChangeProfileCommand}"
+                        ToolTip="Modifier le profil IAM"
+                        Style="{StaticResource ToolButton}">
+                    <materialDesign:PackIcon Kind="ShieldAccount"/>
+                </Button>
+                <Button Command="{Binding TerminateInstanceCommand}"
+                        ToolTip="Supprimer définitivement l'instance"
+                        Style="{StaticResource ToolButton}"
+                        Foreground="Firebrick">
+                    <materialDesign:PackIcon Kind="DeleteOutline"/>
+                </Button>
+            </WrapPanel>
+            <ProgressBar IsIndeterminate="True"
+                         Height="3"
+                         Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        </StackPanel>
 
-
-            <StackPanel Orientation="Horizontal" Grid.Column="0">
-                <Button Content="Refresh" Command="{Binding RefreshCommand}" />
-               <!-- <Button Content="Start" Command="{Binding StartInstanceCommand}" Margin="5,0,0,0"/>
-                <Button Content="Stop" Command="{Binding StopInstanceCommand}" Margin="5,0,0,0"/>
-                <Button Content="Terminate" Command="{Binding TerminateInstanceCommand}" Margin="5,0,0,0"/>
-                <Button Content="Connect via SSM" Command="{Binding ConnectCommand}" Margin="5,0,0,0"/>
-                <Button Content="Edit Tags" Command="{Binding EditTagsCommand}" Margin="5,0,0,0"/>
-                <Button Content="Full Description" Command="{Binding ViewDetailsCommand}" Margin="5,0,0,0"/> -->
-            </StackPanel>
-
-
-            <TextBlock Grid.Column="1"
-                       Text="Loading..."
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Center"
-                       Margin="10,0"
-                       Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
-
-            <Button Grid.Column="2"
-                    Content="Close RDP Session"
-                    Command="{Binding DisconnectCommand}"
-                    Margin="0,0,0,0"/>
-        </Grid>
-
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Instances}" SelectedItem="{Binding SelectedInstance}"
-                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
-                  Style="{StaticResource MaterialDesignDataGrid}">
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding FilteredItems}"
+                  SelectedItem="{Binding SelectedInstance}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  Style="{StaticResource ResourceGrid}">
             <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow" >
-                    <Setter Property="Tag" 
-                Value="{Binding ElementName=EC2ViewControl, Path=DataContext}"/>
+                <Style TargetType="DataGridRow"
+                       BasedOn="{StaticResource ResourceRow}">
+                    <Setter Property="Tag"
+                            Value="{Binding ElementName=EC2ViewControl, Path=DataContext}"/>
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <ContextMenu>
-                                <MenuItem Header="{Binding InstanceId}" HorizontalContentAlignment="Center" IsEnabled="False" />
-                                <Separator />
-                                <MenuItem Header="Start EC2"
-                              Command="{Binding PlacementTarget.Tag.StartInstanceCommand,
+                                <MenuItem Header="{Binding InstanceId}"
+                                          HorizontalContentAlignment="Center"
+                                          IsEnabled="False"/>
+                                <Separator/>
+                                <MenuItem Header="Démarrer"
+                                          Command="{Binding PlacementTarget.Tag.StartInstanceCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                              CommandParameter="{Binding}"/>
-                                <MenuItem Header="Stop EC2"
-                              Command="{Binding PlacementTarget.Tag.StopInstanceCommand,
+                                          CommandParameter="{Binding}"/>
+                                <MenuItem Header="Arrêter"
+                                          Command="{Binding PlacementTarget.Tag.StopInstanceCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                              CommandParameter="{Binding}"/>
-                                <MenuItem Header="Terminate"
-                              Command="{Binding PlacementTarget.Tag.TerminateInstanceCommand,
+                                          CommandParameter="{Binding}"/>
+                                <MenuItem Header="Supprimer définitivement"
+                                          Command="{Binding PlacementTarget.Tag.TerminateInstanceCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                              CommandParameter="{Binding}"/>
-                                <MenuItem Header="Connect via SSM"
-                              Command="{Binding PlacementTarget.Tag.ConnectCommand,
+                                          CommandParameter="{Binding}"/>
+                                <MenuItem Header="Connexion SSM"
+                                          Command="{Binding PlacementTarget.Tag.ConnectCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                              CommandParameter="{Binding}"/>
-                                <MenuItem Header="Edit Tags"
-                              Command="{Binding PlacementTarget.Tag.EditTagsCommand,
+                                          CommandParameter="{Binding}"/>
+                                <MenuItem Header="Modifier les tags"
+                                          Command="{Binding PlacementTarget.Tag.EditTagsCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                              CommandParameter="{Binding}"/>
-                                <MenuItem Header="Full Description"
-                              Command="{Binding PlacementTarget.Tag.ViewDetailsCommand,
+                                          CommandParameter="{Binding}"/>
+                                <MenuItem Header="Détails"
+                                          Command="{Binding PlacementTarget.Tag.ViewDetailsCommand,
+                                            RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding}"/>
+                                <MenuItem Header="Modifier le profil IAM"
+                                          Command="{Binding PlacementTarget.Tag.ChangeProfileCommand,
                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                              CommandParameter="{Binding}"/>
+                                          CommandParameter="{Binding}"/>
                             </ContextMenu>
                         </Setter.Value>
                     </Setter>
                 </Style>
             </DataGrid.RowStyle>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Name" Binding="{Binding Name}" />
-                <DataGridTextColumn Header="Instance ID" Binding="{Binding InstanceId}" />
-                <DataGridTextColumn Header="Type" Binding="{Binding InstanceType}" />
-                <DataGridTextColumn Header="State" Binding="{Binding State}" >
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="Orange"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding State}" Value="running">
-                                    <Setter Property="Foreground" Value="Green"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding State}" Value="stopped">
-                                    <Setter Property="Foreground" Value="Red"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="Public IP" Binding="{Binding PublicIp}" />
-                <DataGridTextColumn Header="Private IP" Binding="{Binding PrivateIp}" />
-                <DataGridTextColumn Header="Plateform" Binding="{Binding Platform}" />
-                <DataGridCheckBoxColumn Header="SSM Managed" Binding="{Binding IsSsmManaged}" />
-                <DataGridTextColumn Header="Security Groups" Binding="{Binding SecurityGroups}" Width="*"/>
+                <DataGridTextColumn Header="Nom"
+                                    ElementStyle="{StaticResource ResourceName}"
+                                    MinWidth="180"
+                                    Binding="{Binding Name}"/>
+                <DataGridTextColumn Header="Identifiant"
+                                    ElementStyle="{StaticResource ResourceIdentifier}"
+                                    Binding="{Binding InstanceId}"/>
+                <DataGridTextColumn Header="Type"
+                                    Binding="{Binding InstanceType}"/>
+                <DataGridTemplateColumn Header="État"
+                                        SortMemberPath="State"
+                                        Width="115">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ContentControl Content="{Binding State}"
+                                            Style="{StaticResource StateBadge}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="IP publique"
+                                    ElementStyle="{StaticResource ResourceIdentifier}"
+                                    Binding="{Binding PublicIp}"/>
+                <DataGridTextColumn Header="IP privée"
+                                    ElementStyle="{StaticResource ResourceIdentifier}"
+                                    Binding="{Binding PrivateIp}"/>
+                <DataGridTextColumn Header="Plateforme"
+                                    Binding="{Binding Platform}"/>
+                <DataGridCheckBoxColumn Header="SSM"
+                                        Binding="{Binding IsSsmManaged}"/>
+                <DataGridTextColumn Header="Groupes de sécurité"
+                                    Binding="{Binding SecurityGroups}"
+                                    Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
+        <TextBlock Grid.Row="1"
+                   Style="{StaticResource ResourceEmptyState}"/>
     </Grid>
 </UserControl>

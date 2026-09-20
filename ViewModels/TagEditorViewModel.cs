@@ -1,4 +1,4 @@
-﻿using Amazon.EC2.Model;
+using Amazon.EC2.Model;
 using Amazon.EC2;
 using AwsManager.Models;
 using System;
@@ -12,16 +12,25 @@ using System.Windows.Input;
 
 namespace AwsManager.ViewModels
 {
-    public class TagEditorViewModel : ViewModelBase
+    public class TagEditorViewModel : AwsResourceViewModel
     {
 
-        private readonly List<TagModel> _originalTags; 
+        private readonly List<TagModel> _originalTags;
         public string InstanceId { get; set; }
         public ObservableCollection<TagModel> Tags { get; set; }
 
         public ICommand AddTagCommand { get; }
         public ICommand RemoveTagCommand { get; }
         public ICommand SaveChangesCommand { get; }
+        private bool _tagsLoaded;
+        private bool _busy;
+        public bool CanEdit => _tagsLoaded && !_busy;
+        private void SetBusy(bool value)
+        {
+            _busy = value;
+            OnPropertyChanged(nameof(CanEdit));
+            CommandManager.InvalidateRequerySuggested();
+        }
 
         public TagEditorViewModel(string instanceId)
         {
@@ -29,18 +38,23 @@ namespace AwsManager.ViewModels
             Tags = [];
             _originalTags = [];
 
-            AddTagCommand = new RelayCommand(_ => Tags.Add(new TagModel { Key = "New-Key", Value = "New-Value" }));
-            RemoveTagCommand = new RelayCommand(param => { if (param is TagModel tag) Tags.Remove(tag); });
-            SaveChangesCommand = new RelayCommand(async _ => await SaveChangesAsync());
+            AddTagCommand = new RelayCommand(_ => Tags.Add(new TagModel { Key = "", Value = "" }), _ => CanEdit && Allowed("ec2:CreateTags", Arn("ec2", $"instance/{InstanceId}"), true));
+            RemoveTagCommand = new RelayCommand(param => { if (param is TagModel tag) Tags.Remove(tag); }, _ => CanEdit && Allowed("ec2:DeleteTags", Arn("ec2", $"instance/{InstanceId}"), true));
+            SaveChangesCommand = new AsyncRelayCommand(async _ => await SaveChangesAsync(), _ => CanEdit &&
+                (Tags.Count == 0 || Allowed("ec2:CreateTags", Arn("ec2", $"instance/{InstanceId}"), true)) &&
+                (!_originalTags.Any(original => !Tags.Any(tag => tag.Key == original.Key)) || Allowed("ec2:DeleteTags", Arn("ec2", $"instance/{InstanceId}"), true)));
 
             _ = LoadTagsAsync();
         }
 
         private async Task LoadTagsAsync()
         {
+            _tagsLoaded = false;
+            SetBusy(true);
+            Status = "Chargement des tags...";
             try
             {
-                using var ec2Client = new AmazonEC2Client();
+                using var ec2Client = ClientFactory.CreateEc2Client();
                 var response = await ec2Client.DescribeTagsAsync(new DescribeTagsRequest
                 {
                     Filters =
@@ -52,8 +66,9 @@ namespace AwsManager.ViewModels
                 Tags.Clear();
                 _originalTags.Clear();
 
-                foreach (var tagDescription in response.Tags)
+                foreach (var tagDescription in response.Tags ?? [])
                 {
+                    if (tagDescription.Key.StartsWith("aws:", StringComparison.OrdinalIgnoreCase)) continue;
                     var tagModel = new TagModel
                     {
                         Key = tagDescription.Key,
@@ -67,21 +82,25 @@ namespace AwsManager.ViewModels
                         Value = tagModel.Value
                     });
                 }
+                _tagsLoaded = true;
+                Status = "Tags charges.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load tags: {ex.Message}",
-                                "Error",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Error);
+                ReportError(ex);
             }
+            finally { SetBusy(false); }
         }
 
         private async Task SaveChangesAsync()
         {
+            SetBusy(true);
             try
             {
-                using var ec2Client = new AmazonEC2Client();
+                AwsManager.Services.ResourceValidation.Tags(Tags.Select(tag => (tag.Key, tag.Value)));
+                if (Tags.Any(tag => tag.Key.StartsWith("aws:", StringComparison.OrdinalIgnoreCase)))
+                    throw new ArgumentException("Les tags reserves ne peuvent pas etre modifies.");
+                using var ec2Client = ClientFactory.CreateEc2Client();
 
                 // Filtrer les tags réservés AWS
                 var originalFiltered = _originalTags
@@ -123,13 +142,14 @@ namespace AwsManager.ViewModels
                     await ec2Client.CreateTagsAsync(createRequest);
                 }
 
-                MessageBox.Show("Tags saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 await LoadTagsAsync(); // Refresh the list
+                if (_tagsLoaded) Status = "Tags enregistres.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to save tags: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ReportError(ex);
             }
+            finally { SetBusy(false); }
         }
     }
 }

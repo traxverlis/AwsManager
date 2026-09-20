@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -13,7 +13,7 @@ using AwsManager.ViewModels;
 
 namespace AwsManager.ViewModels
 {
-    public class InstanceDetailsViewModel : ViewModelBase
+    public class InstanceDetailsViewModel : AwsResourceViewModel
     {
         public ObservableCollection<KeyValuePair<string, string>> InstanceProperties { get; }
 
@@ -28,7 +28,7 @@ namespace AwsManager.ViewModels
         {
             try
             {
-                using var ec2Client = new AmazonEC2Client();
+                using var ec2Client = ClientFactory.CreateEc2Client();
                 var response = await ec2Client.DescribeInstancesAsync(new DescribeInstancesRequest
                 {
                     InstanceIds = [instanceId]
@@ -67,7 +67,7 @@ namespace AwsManager.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load instance details: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ReportError(ex);
             }
         }
     }

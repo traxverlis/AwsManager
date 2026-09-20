@@ -5,53 +5,182 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:viewmodels="clr-namespace:AwsManager.ViewModels"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=viewmodels:S3ViewModel, IsDesignTimeCreatable=True}"
              d:DesignHeight="600"
-        d:DesignWidth="1000">
+             d:DesignWidth="1000">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal"
-                Margin="5">
-            <Button Content="Go to Root"
-                    Command="{Binding RefreshCommand}"/>
-            <Button Content="Download Selected" Command="{Binding DownloadFileCommand}" Margin="5,0,0,0"/>
-            <Button Content="Delete Selected" Command="{Binding DeleteFileCommand}" Margin="5,0,0,0"/>
-            <Button Content="Upload File" Command="{Binding UploadFileCommand}" Margin="5,0,0,0"/>
-            <Button Content="Presign File" Command="{Binding PresignFileCommand}" Margin="5,0,0,0"/>
-            <TextBlock Text="{Binding CurrentPath}"
-                    VerticalAlignment="Center"
-                    Margin="10,0"
-                    FontWeight="Bold"/>
+        <StackPanel Margin="0,0,0,8">
+            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                     Style="{StaticResource SearchField}"/>
+            <WrapPanel>
+                <Button Command="{Binding RootCommand}"
+                        ToolTip="Tous les buckets"
+                        Style="{StaticResource ToolButton}">
+                    <materialDesign:PackIcon Kind="HomeOutline"/>
+                </Button>
+                <Button Command="{Binding RefreshCommand}"
+                        ToolTip="Actualiser ce dossier"
+                        Style="{StaticResource ToolButton}">
+                    <materialDesign:PackIcon Kind="Refresh"/>
+                </Button>
+                <Button Command="{Binding DownloadFileCommand}"
+                        ToolTip="Télécharger"
+                        Style="{StaticResource ToolButton}">
+                    <materialDesign:PackIcon Kind="Download"/>
+                </Button>
+                <Button Command="{Binding UploadFileCommand}"
+                        ToolTip="Envoyer un fichier"
+                        Style="{StaticResource ToolButton}">
+                    <materialDesign:PackIcon Kind="Upload"/>
+                </Button>
+                <Button Command="{Binding DeleteFileCommand}"
+                        ToolTip="Supprimer les fichiers sélectionnés"
+                        Style="{StaticResource ToolButton}"
+                        Foreground="Firebrick">
+                    <materialDesign:PackIcon Kind="DeleteOutline"/>
+                </Button>
+                <TextBox x:Name="LinkDuration"
+                         Text="{Binding LinkMinutes, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                         Style="{StaticResource FormField}"
+                         Width="100"
+                         Margin="8,0,8,6"
+                         materialDesign:HintAssist.Hint="Durée (min)"/>
+                <Button Content="Copier le lien signé"
+                        Command="{Binding PresignFileCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button"
+                               BasedOn="{StaticResource ToolButton}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ElementName=LinkDuration, Path=(Validation.HasError)}"
+                                             Value="True">
+                                    <Setter Property="IsEnabled"
+                                            Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Command="{Binding CancelTransferCommand}"
+                        ToolTip="Annuler le transfert"
+                        Style="{StaticResource ToolButton}">
+                    <materialDesign:PackIcon Kind="Close"/>
+                </Button>
+                <TextBlock Text="{Binding SelectionSummary}"
+                        VerticalAlignment="Center"
+                        Margin="12,0,0,6"
+                        Foreground="{StaticResource MutedInkBrush}"/>
+            </WrapPanel>
+            <Border Background="#EAF0F4"
+                    CornerRadius="4"
+                    Padding="10,8"
+                    Margin="0,6">
+                <DockPanel>
+                    <materialDesign:PackIcon Kind="FolderOutline"
+                                             Width="18"
+                                             Height="18"
+                                             Margin="0,0,8,0"
+                                             Foreground="{StaticResource AccentBrush}"/>
+                    <TextBox Text="{Binding CurrentPath, Mode=OneWay}"
+                             IsReadOnly="True"
+                             Style="{x:Null}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             FontFamily="Cascadia Mono, Consolas"
+                             FontSize="12"
+                             VerticalContentAlignment="Center"/>
+                </DockPanel>
+            </Border>
+            <ProgressBar Value="{Binding TransferProgress}"
+                         IsIndeterminate="{Binding IsListing}"
+                         Height="3"
+                         Maximum="100"/>
+            <TextBlock Text="{Binding Status}"
+                    TextWrapping="Wrap"
+                    Margin="0,6,0,0"/>
         </StackPanel>
 
-        <ListView Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedFile}" IsEnabled="{Binding IsNotLoading}">
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding FilteredItems}"
+                  SelectedItem="{Binding SelectedFile}"
+                  SelectionMode="Extended"
+                  SelectionUnit="FullRow"
+                  SelectionChanged="OnSelectionChanged"
+                  IsEnabled="{Binding IsNotLoading}"
+                  Style="{StaticResource ResourceGrid}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  ScrollViewer.HorizontalScrollBarVisibility="Auto">
             <i:Interaction.Triggers>
                 <i:EventTrigger EventName="MouseDoubleClick">
                     <i:InvokeCommandAction Command="{Binding OpenItemCommand}"
-                            CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ListView}}"/>
+                                           CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
                 </i:EventTrigger>
             </i:Interaction.Triggers>
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="Type"
-                            DisplayMemberBinding="{Binding ItemType}"
-                            Width="100"/>
-                    <GridViewColumn Header="Name"
-                            DisplayMemberBinding="{Binding Name}"
-                            Width="300"/>
-                    <GridViewColumn Header="Size (Bytes)"
-                            DisplayMemberBinding="{Binding Size}"
-                            Width="120"/>
-                    <GridViewColumn Header="Last Modified"
-                            DisplayMemberBinding="{Binding LastModified, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
-                            Width="200"/>
-                </GridView>
-            </ListView.View>
-        </ListView>
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Width="60">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <materialDesign:PackIcon Width="20"
+                                                     Height="20"
+                                                     VerticalAlignment="Center"
+                                                     ToolTip="{Binding ItemType}">
+                                <materialDesign:PackIcon.Style>
+                                    <Style TargetType="materialDesign:PackIcon">
+                                        <Setter Property="Kind"
+                                                Value="FileDocumentOutline"/>
+                                        <Setter Property="Foreground"
+                                                Value="#487895"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ItemType}"
+                                                         Value="Bucket">
+                                                <Setter Property="Kind"
+                                                        Value="ArchiveOutline"/>
+                                                <Setter Property="Foreground"
+                                                        Value="{StaticResource AccentBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ItemType}"
+                                                         Value="Folder">
+                                                <Setter Property="Kind"
+                                                        Value="FolderOutline"/>
+                                                <Setter Property="Foreground"
+                                                        Value="#AD7C28"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ItemType}"
+                                                         Value="Navigation">
+                                                <Setter Property="Kind"
+                                                        Value="ArrowUp"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </materialDesign:PackIcon.Style>
+                            </materialDesign:PackIcon>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Nom"
+                                    Binding="{Binding Name}"
+                                    ElementStyle="{StaticResource ResourceName}"
+                                    Width="*"
+                                    MinWidth="200"/>
+                <DataGridTextColumn Header="Type"
+                                    Binding="{Binding ItemType}"
+                                    Width="100"/>
+                <DataGridTextColumn Header="Taille"
+                                    Binding="{Binding Size}"
+                                    Width="100"/>
+                <DataGridTextColumn Header="Dernière modification"
+                                    Binding="{Binding LastModified, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}"
+                                    Width="180"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <TextBlock Grid.Row="1"
+                   Style="{StaticResource ResourceEmptyState}"/>
     </Grid>
 </UserControl>

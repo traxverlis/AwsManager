@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -13,7 +13,7 @@ using AwsManager.ViewModels;
 
 namespace AwsManager.ViewModels
 {
-    public class RdsDetailsViewModel : ViewModelBase
+    public class RdsDetailsViewModel : AwsResourceViewModel
     {
         public ObservableCollection<KeyValuePair<string, string>> InstanceProperties { get; }
 
@@ -28,7 +28,7 @@ namespace AwsManager.ViewModels
         {
             try
             {
-                using var rdsClient = new AmazonRDSClient();
+                using var rdsClient = ClientFactory.CreateRdsClient();
                 var response = await rdsClient.DescribeDBInstancesAsync(new DescribeDBInstancesRequest
                 {
                     DBInstanceIdentifier = dbInstanceIdentifier
@@ -67,7 +67,7 @@ namespace AwsManager.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load RDS instance details: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ReportError(ex);
             }
         }
     }

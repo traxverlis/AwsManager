@@ -1,4 +1,4 @@
-﻿using Amazon.AutoScaling;
+using Amazon.AutoScaling;
 using Amazon.AutoScaling.Model;
 using AwsManager.Models;
 using System;
@@ -11,15 +11,25 @@ using System.Windows.Input;
 
 namespace AwsManager.ViewModels
 {
-    public class AutoScalingTagEditorViewModel : ViewModelBase
+    public class AutoScalingTagEditorViewModel : AwsResourceViewModel
     {
         private readonly List<ASGTagModel> _originalTags;
+        private string _resourceArn = "";
         public string AutoScalingGroupName { get; set; }
         public ObservableCollection<ASGTagModel> Tags { get; set; }
 
         public ICommand AddTagCommand { get; }
         public ICommand RemoveTagCommand { get; }
         public ICommand SaveChangesCommand { get; }
+        private bool _tagsLoaded;
+        private bool _busy;
+        public bool CanEdit => _tagsLoaded && !_busy;
+        private void SetBusy(bool value)
+        {
+            _busy = value;
+            OnPropertyChanged(nameof(CanEdit));
+            CommandManager.InvalidateRequerySuggested();
+        }
 
         public AutoScalingTagEditorViewModel(string asgName)
         {
@@ -27,38 +37,42 @@ namespace AwsManager.ViewModels
             Tags = new ObservableCollection<ASGTagModel>();
             _originalTags = new List<ASGTagModel>();
 
-            AddTagCommand = new RelayCommand(_ => Tags.Add(new ASGTagModel { Key = "New-Key", Value = "New-Value" }));
-            RemoveTagCommand = new RelayCommand(param => { if (param is ASGTagModel tag) Tags.Remove(tag); });
-            SaveChangesCommand = new RelayCommand(async _ => await SaveChangesAsync());
+            AddTagCommand = new RelayCommand(_ => Tags.Add(new ASGTagModel { Key = "", Value = "" }), _ => CanEdit && Allowed("autoscaling:CreateOrUpdateTags", _resourceArn, true));
+            RemoveTagCommand = new RelayCommand(param => { if (param is ASGTagModel tag) Tags.Remove(tag); }, _ => CanEdit && Allowed("autoscaling:DeleteTags", _resourceArn, true));
+            SaveChangesCommand = new AsyncRelayCommand(async _ => await SaveChangesAsync(), _ => CanEdit &&
+                (Tags.Count == 0 || Allowed("autoscaling:CreateOrUpdateTags", _resourceArn, true)) &&
+                (!_originalTags.Any(original => !Tags.Any(tag => tag.Key == original.Key)) || Allowed("autoscaling:DeleteTags", _resourceArn, true)));
 
             _ = LoadTagsAsync();
         }
 
         private async Task LoadTagsAsync()
         {
+            _tagsLoaded = false;
+            SetBusy(true);
+            Status = "Chargement des tags...";
             try
             {
-                using var asgClient = new AmazonAutoScalingClient();
+                using var asgClient = ClientFactory.CreateAutoScalingClient();
                 var response = await asgClient.DescribeAutoScalingGroupsAsync(new DescribeAutoScalingGroupsRequest
                 {
                     AutoScalingGroupNames = new List<string> { AutoScalingGroupName }
                 });
 
-                var group = response.AutoScalingGroups.FirstOrDefault();
+                var group = response.AutoScalingGroups?.FirstOrDefault();
                 if (group == null)
                 {
-                    MessageBox.Show($"Auto Scaling Group {AutoScalingGroupName} not found.",
-                                    "Error",
-                                    MessageBoxButton.OK,
-                                    MessageBoxImage.Error);
+                    Status = "Groupe Auto Scaling introuvable.";
                     return;
                 }
 
                 Tags.Clear();
                 _originalTags.Clear();
 
-                foreach (var tagDescription in group.Tags)
+                _resourceArn = group.AutoScalingGroupARN ?? "";
+                foreach (var tagDescription in group.Tags ?? [])
                 {
+                    if (tagDescription.Key.StartsWith("aws:", StringComparison.OrdinalIgnoreCase)) continue;
                     var tagModel = new ASGTagModel
                     {
                         Key = tagDescription.Key,
@@ -75,21 +89,25 @@ namespace AwsManager.ViewModels
 
                     });
                 }
+                _tagsLoaded = true;
+                Status = "Tags charges.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load tags: {ex.Message}",
-                                "Error",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Error);
+                ReportError(ex);
             }
+            finally { SetBusy(false); }
         }
 
         private async Task SaveChangesAsync()
         {
+            SetBusy(true);
             try
             {
-                using var asgClient = new AmazonAutoScalingClient();
+                AwsManager.Services.ResourceValidation.Tags(Tags.Select(tag => (tag.Key, tag.Value)));
+                if (Tags.Any(tag => tag.Key.StartsWith("aws:", StringComparison.OrdinalIgnoreCase)))
+                    throw new ArgumentException("Les tags reserves ne peuvent pas etre modifies.");
+                using var asgClient = ClientFactory.CreateAutoScalingClient();
 
                 // Tags à supprimer
                 var tagsToDelete = _originalTags
@@ -131,13 +149,14 @@ namespace AwsManager.ViewModels
                     await asgClient.CreateOrUpdateTagsAsync(createRequest);
                 }
 
-                MessageBox.Show("Tags saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 await LoadTagsAsync(); // Rafraîchir la liste
+                if (_tagsLoaded) Status = "Tags enregistres.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to save tags: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ReportError(ex);
             }
+            finally { SetBusy(false); }
         }
     }
 }

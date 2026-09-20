@@ -11,7 +11,7 @@ namespace AwsManager.ViewModels
     {
         public static string Name => "Live Sessions";
 
-        public static ObservableCollection<TrackedSessionModel> ActiveSessions => SessionTrackingService.Instance.ActiveSessions;
+        public ObservableCollection<TrackedSessionModel> ActiveSessions => SessionTrackingService.Instance.ActiveSessions;
 
         private TrackedSessionModel? _selectedSession;
         public TrackedSessionModel? SelectedSession
@@ -33,7 +33,7 @@ namespace AwsManager.ViewModels
 
         private void KillSession(object? parameter)
         {
-            if (SelectedSession != null)
+            if (SelectedSession != null && new NotificationService().Confirm($"Fermer cette connexion ?\n{SelectedSession.Description}"))
             {
                 SessionTrackingService.Instance.KillSession(SelectedSession);
             }

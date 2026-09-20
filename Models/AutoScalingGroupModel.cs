@@ -5,6 +5,7 @@ namespace AwsManager.Models
     public class AutoScalingGroupModel
     {
         public string AutoScalingGroupName { get; set; } = string.Empty;
+        public string ResourceArn { get; set; } = string.Empty;
         public int MinSize { get; set; }
         public int MaxSize { get; set; }
         public int DesiredCapacity { get; set; }

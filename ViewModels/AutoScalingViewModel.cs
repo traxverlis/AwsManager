@@ -9,19 +9,21 @@ using Amazon.AutoScaling;
 using Amazon.AutoScaling.Model;
 using AwsManager.Models;
 using AwsManager.Views.Dialogs;
+using AwsManager.Services;
 
 
 namespace AwsManager.ViewModels
 {
-    public class AutoScalingViewModel : ViewModelBase, IRefreshableViewModel
+    public class AutoScalingViewModel : AwsResourceViewModel, IRefreshableViewModel
     {
         public static string Name => "Auto Scaling";
 
         private bool _isLoading;
+        private readonly Dictionary<string, string> _scheduleErrors = [];
         public bool IsLoading
         {
             get => _isLoading;
-            set => SetField(ref _isLoading, value);
+            set { if (SetField(ref _isLoading, value)) CommandManager.InvalidateRequerySuggested(); }
         }
 
         public ObservableCollection<AutoScalingGroupModel> AutoScalingGroups { get; }
@@ -54,36 +56,48 @@ namespace AwsManager.ViewModels
         private int _newDesiredCapacity;
         public int NewDesiredCapacity { get => _newDesiredCapacity; set => SetField(ref _newDesiredCapacity, value); }
 
-        public AutoScalingViewModel()
+        public AutoScalingViewModel() : this(null) { }
+        public AutoScalingViewModel(IAwsClientFactory? clientFactory, bool load = true, AwsContext? context = null) : base(clientFactory, context)
         {
             AutoScalingGroups = [];
-            RefreshCommand = new RelayCommand(async _ => await LoadGroupsAsync(), _ => !IsLoading);
-            UpdateGroupCommand = new RelayCommand(async _ => await UpdateGroupAsync(), _ => SelectedGroup != null && !IsLoading);
-            EditTagsCommand = new RelayCommand(EditTags, _ => SelectedGroup != null);
-            DescribeScheduleCommand = new RelayCommand(DescribeSchedule, _ => SelectedGroup != null); // Ajoutez cette ligne
+            ConfigureFilter<AutoScalingGroupModel>(AutoScalingGroups, group => $"{group.AutoScalingGroupName} {group.Status}");
+            RefreshCommand = new AsyncRelayCommand(async _ => await LoadGroupsAsync(), _ => !IsLoading && Allowed("autoscaling:DescribeAutoScalingGroups"));
+            UpdateGroupCommand = new AsyncRelayCommand(async _ => await UpdateGroupAsync(), _ => SelectedGroup != null && !IsLoading && Allowed("autoscaling:UpdateAutoScalingGroup", SelectedGroup.ResourceArn, true));
+            EditTagsCommand = new RelayCommand(EditTags, _ => SelectedGroup != null && !IsLoading &&
+                (Allowed("autoscaling:CreateOrUpdateTags", SelectedGroup.ResourceArn, true) | Allowed("autoscaling:DeleteTags", SelectedGroup.ResourceArn, true)));
+            DescribeScheduleCommand = new RelayCommand(DescribeSchedule, _ => SelectedGroup != null && !IsLoading && Allowed("autoscaling:DescribeScheduledActions"));
 
-            _ = LoadGroupsAsync();
+            if (load) _ = LoadGroupsAsync();
         }
 
         private async Task LoadGroupsAsync()
         {
             IsLoading = true;
+            Status = "";
+            SelectedGroup = null;
+            _scheduleErrors.Clear();
             AutoScalingGroups.Clear();
             try
             {
-                using var asgClient = new AmazonAutoScalingClient();
+                using var asgClient = ClientFactory.CreateAutoScalingClient();
                 var paginator = asgClient.Paginators.DescribeAutoScalingGroups(new DescribeAutoScalingGroupsRequest());
-                
+
 
 
                 await foreach (var asg in paginator.AutoScalingGroups)
                 {
+                    if (string.IsNullOrWhiteSpace(asg.AutoScalingGroupName))
+                    {
+                        continue;
+                    }
+
                     var scheduledActions = await GetScheduledActionsForGroupAsync(asgClient, asg.AutoScalingGroupName);
 
 
                     AutoScalingGroups.Add(new AutoScalingGroupModel
                     {
                         AutoScalingGroupName = asg.AutoScalingGroupName ?? "",
+                        ResourceArn = asg.AutoScalingGroupARN ?? "",
                         MinSize = asg.MinSize ?? 0,
                         MaxSize = asg.MaxSize ?? 0,
                         DesiredCapacity = asg.DesiredCapacity ?? 0,
@@ -97,7 +111,7 @@ namespace AwsManager.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load Auto Scaling Groups: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ReportError(ex);
             }
             finally
             {
@@ -105,7 +119,7 @@ namespace AwsManager.ViewModels
             }
         }
 
-        private async Task<List<ScheduledActionModel>> GetScheduledActionsForGroupAsync(AmazonAutoScalingClient asgClient, string groupName)
+        private async Task<List<ScheduledActionModel>> GetScheduledActionsForGroupAsync(IAmazonAutoScaling asgClient, string groupName)
         {
             try
             {
@@ -114,9 +128,10 @@ namespace AwsManager.ViewModels
                     AutoScalingGroupName = groupName
                 };
 
-                var response = await asgClient.DescribeScheduledActionsAsync(request);
-
-                return [.. response.ScheduledUpdateGroupActions.Select(action => new ScheduledActionModel
+                var actions = new List<ScheduledUpdateGroupAction>();
+                await foreach (var action in asgClient.Paginators.DescribeScheduledActions(request).ScheduledUpdateGroupActions)
+                    actions.Add(action);
+                return [.. actions.Select(action => new ScheduledActionModel
                 {
                     ScheduledActionName = action.ScheduledActionName ?? "",
                     AutoScalingGroupName = action.AutoScalingGroupName ?? "",
@@ -131,8 +146,8 @@ namespace AwsManager.ViewModels
             }
             catch (Exception ex)
             {
-                // Log l'erreur mais ne pas interrompre le chargement principal
-                System.Diagnostics.Debug.WriteLine($"Failed to load scheduled actions for {groupName}: {ex.Message}");
+                _scheduleErrors[groupName] = AwsSessionService.DescribeError(ex);
+                ReportError(ex);
                 return [];
             }
         }
@@ -142,6 +157,9 @@ namespace AwsManager.ViewModels
             if (SelectedGroup == null) return;
 
             var groupName = SelectedGroup.AutoScalingGroupName;
+            try { ResourceValidation.Capacity(NewMinSize, NewDesiredCapacity, NewMaxSize); }
+            catch (ArgumentException exception) { ReportError(exception); return; }
+            if (!Confirm($"Modifier {groupName} ?\nMinimum : {SelectedGroup.MinSize} -> {NewMinSize}\nSouhaite : {SelectedGroup.DesiredCapacity} -> {NewDesiredCapacity}\nMaximum : {SelectedGroup.MaxSize} -> {NewMaxSize}")) return;
             var request = new UpdateAutoScalingGroupRequest
             {
                 AutoScalingGroupName = groupName,
@@ -152,20 +170,23 @@ namespace AwsManager.ViewModels
 
             try
             {
-                using var asgClient = new AmazonAutoScalingClient();
+                IsLoading = true;
+                using var asgClient = ClientFactory.CreateAutoScalingClient();
                 await asgClient.UpdateAutoScalingGroupAsync(request);
-                MessageBox.Show($"Successfully updated Auto Scaling Group '{groupName}'.", "Update Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+                NotificationService.Publish($"Modification demandee : {groupName}.");
 
                 await LoadGroupsAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to update Auto Scaling Group '{groupName}': {ex.Message}", "Update Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ReportError(ex);
             }
+            finally { IsLoading = false; }
         }
 
         private void EditTags(object? parameter)
         {
+            SelectedGroup = parameter as AutoScalingGroupModel ?? SelectedGroup;
             if (SelectedGroup == null) return;
 
             var tagEditorViewModel = new AutoScalingTagEditorViewModel(SelectedGroup.AutoScalingGroupName);
@@ -175,7 +196,7 @@ namespace AwsManager.ViewModels
                 Owner = Application.Current.MainWindow
             };
 
-            tagEditorWindow.Show();
+            tagEditorWindow.ShowDialog();
             // After closing the dialog, refresh the main instance list in case the name tag was changed
             if (RefreshCommand.CanExecute(null))
             {
@@ -183,8 +204,16 @@ namespace AwsManager.ViewModels
             }
         }
 
-        private async void DescribeSchedule(object? parameter)
+        private void DescribeSchedule(object? parameter)
         {
+            if (SelectedGroup == null) return;
+            if (_scheduleErrors.TryGetValue(SelectedGroup.AutoScalingGroupName, out var error))
+            {
+                new HelpWindow { Owner = Application.Current.MainWindow, Title = "Actions planifiees indisponibles", DataContext = error }.ShowDialog();
+                return;
+            }
+            var text = string.Join("\n", SelectedGroup.ScheduledActions.Select(action => $"{action.ScheduledActionName} | {action.Recurrence} | {action.StartTime} | min={action.MinSize} / max={action.MaxSize} / souhaite={action.DesiredCapacity}"));
+            new HelpWindow { Owner = Application.Current.MainWindow, Title = "Actions planifiees", DataContext = string.IsNullOrEmpty(text) ? "Aucune action planifiee." : text }.ShowDialog();
             //if (SelectedGroup == null) return;
 
             //var scheduledActions = await GetScheduledActionsForGroupAsync(SelectedGroup.AutoScalingGroupName);

@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    uses: ./.github/workflows/dotnet.yml
+
+  publish:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ github.ref_name }}
+
+    steps:
+      - name: Validate release tag
+        run: |
+          if ($env:RELEASE_TAG -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$') {
+            throw 'Expected a tag such as v1.2.3 or v1.2.3-rc.1.'
+          }
+      - name: Download tested application
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: AwsManager-win-x64
+          path: artifacts/AwsManager
+      - name: Package release
+        run: |
+          New-Item -ItemType Directory -Path artifacts/release -Force | Out-Null
+          $archiveName = "AwsManager-$env:RELEASE_TAG-win-x64.zip"
+          $archivePath = Join-Path 'artifacts/release' $archiveName
+          Compress-Archive -Path 'artifacts/AwsManager/*' -DestinationPath $archivePath
+          $hash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $archiveName" | Set-Content -LiteralPath "$archivePath.sha256" -Encoding ascii
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $archivePath = "artifacts/release/AwsManager-$env:RELEASE_TAG-win-x64.zip"
+          $releaseArguments = @(
+            'release', 'create', $env:RELEASE_TAG,
+            $archivePath, "$archivePath.sha256",
+            '--verify-tag', '--generate-notes', '--title', "AwsManager $env:RELEASE_TAG"
+          )
+          if ($env:RELEASE_TAG.Contains('-')) {
+            $releaseArguments += @('--prerelease', '--latest=false')
+          }
+          gh @releaseArguments
+          if ($LASTEXITCODE -ne 0) {
+            throw 'GitHub release publication failed.'
+          }

@@ -22,6 +22,11 @@ namespace AwsManager.Views.Dialogs
         public SsmConnectionWindow()
         {
             InitializeComponent();
+            Closed += (_, _) =>
+            {
+                if (DataContext is ViewModels.SsmConnectionViewModel model && model.CancelCommand.CanExecute(null))
+                    model.CancelCommand.Execute(null);
+            };
         }
     }
 }

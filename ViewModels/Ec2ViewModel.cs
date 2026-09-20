@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
@@ -7,18 +7,17 @@ using System.Windows;
 using System.Windows.Input;
 using Amazon.EC2;
 using Amazon.EC2.Model;
-using Amazon.RDS.Model;
-using Amazon.RDS;
 using Amazon.Runtime;
 using Amazon.SimpleSystemsManagement;
 using Amazon.SimpleSystemsManagement.Model;
 using AwsManager.Models;
 using AwsManager.Views.Dialogs;
+using AwsManager.Services;
 
 
 namespace AwsManager.ViewModels
 {
-    public class Ec2ViewModel : ViewModelBase, IRefreshableViewModel
+    public class Ec2ViewModel : AwsResourceViewModel, IRefreshableViewModel
     {
         public static string Name => "EC2 Instances";
         private bool _isLoading;
@@ -44,6 +43,7 @@ namespace AwsManager.ViewModels
         public ICommand DisconnectCommand { get; }
         public ICommand ViewDetailsCommand { get; }
         public ICommand EditTagsCommand { get; }
+        public ICommand ChangeProfileCommand { get; }
 
 
         private Ec2InstanceModel? _selectedInstance;
@@ -53,67 +53,80 @@ namespace AwsManager.ViewModels
             set => SetField(ref _selectedInstance, value);
         }
 
-        public Ec2ViewModel()
+        public Ec2ViewModel() : this(null) { }
+        public Ec2ViewModel(IAwsClientFactory? clientFactory, bool load = true, AwsContext? context = null) : base(clientFactory, context)
         {
             Instances = [];
-            RefreshCommand = new RelayCommand(async _ => await LoadInstancesAsync(), _ => !IsLoading);
-            StartInstanceCommand = new RelayCommand(StartInstance, _ => SelectedInstance != null);
-            StopInstanceCommand = new RelayCommand(StopInstance, _ => SelectedInstance != null);
-            TerminateInstanceCommand = new RelayCommand(TerminateInstance, _ => SelectedInstance != null);
-            ConnectCommand = new RelayCommand(Connect, _ => SelectedInstance != null && SelectedInstance.IsSsmManaged);
+            ConfigureFilter<Ec2InstanceModel>(Instances, instance => $"{instance.Name} {instance.InstanceId} {instance.State} {instance.PrivateIp} {instance.PublicIp}");
+            RefreshCommand = new AsyncRelayCommand(async _ => await LoadInstancesAsync(), _ => !IsLoading && Allowed("ec2:DescribeInstances"));
+            StartInstanceCommand = new AsyncRelayCommand(StartInstance, parameter => !IsLoading && (parameter as Ec2InstanceModel ?? SelectedInstance)?.State == "stopped" && CanChange("ec2:StartInstances", parameter));
+            StopInstanceCommand = new AsyncRelayCommand(StopInstance, parameter => !IsLoading && (parameter as Ec2InstanceModel ?? SelectedInstance)?.State == "running" && CanChange("ec2:StopInstances", parameter));
+            TerminateInstanceCommand = new AsyncRelayCommand(TerminateInstance, parameter => !IsLoading && (parameter as Ec2InstanceModel ?? SelectedInstance) is { State: not "terminated" and not "shutting-down" } && CanChange("ec2:TerminateInstances", parameter));
+            ConnectCommand = new RelayCommand(Connect, _ => SelectedInstance != null && SelectedInstance.IsSsmManaged && CanChange("ssm:StartSession", null));
             DisconnectCommand = new RelayCommand(Disconnect, _ => !IsLoading);
             ViewDetailsCommand = new RelayCommand(ViewDetails, _ => SelectedInstance != null);
-            EditTagsCommand = new RelayCommand(EditTags, _ => SelectedInstance != null);
+            EditTagsCommand = new RelayCommand(EditTags, _ => SelectedInstance != null && Allowed("ec2:DescribeTags") &&
+                (CanChange("ec2:CreateTags", null) | CanChange("ec2:DeleteTags", null)));
+            ChangeProfileCommand = new RelayCommand(parameter =>
+            {
+                var target = parameter as Ec2InstanceModel ?? SelectedInstance;
+                if (target == null) return;
+                new Ec2ProfileWindow(new(target.InstanceId, ClientFactory, Context)) { Owner = Application.Current.MainWindow }.ShowDialog();
+            }, parameter => !IsLoading && (parameter as Ec2InstanceModel ?? SelectedInstance) is { State: "running" or "stopped" } &&
+                Allowed("ec2:DescribeInstances,ec2:DescribeIamInstanceProfileAssociations,iam:ListInstanceProfiles") &&
+                (CanChange("ec2:AssociateIamInstanceProfile", parameter) | CanChange("ec2:ReplaceIamInstanceProfileAssociation", parameter)));
 
 
 
 
             // Load instances on startup
-            _ = LoadInstancesAsync();
+            if (load) _ = LoadInstancesAsync();
         }
+
+        private bool CanChange(string actions, object? parameter) => Allowed(actions,
+            Arn("ec2", $"instance/{(parameter as Ec2InstanceModel ?? SelectedInstance)?.InstanceId}"), true);
 
         private async Task LoadInstancesAsync()
         {
             IsLoading = true;
+            Status = "";
             Instances.Clear();
             try
             {
-                using var ec2Client = new AmazonEC2Client();
-                using var ssmClient = new AmazonSimpleSystemsManagementClient();
+                using var ec2Client = ClientFactory.CreateEc2Client();
+                using var ssmClient = ClientFactory.CreateSsmClient();
 
-                var instancesResponse = await ec2Client.DescribeInstancesAsync(new DescribeInstancesRequest());
-                var ssmResponse = await ssmClient.DescribeInstanceInformationAsync(new DescribeInstanceInformationRequest());
+                var reservations = new List<Reservation>();
+                await foreach (var reservation in ec2Client.Paginators.DescribeInstances(new DescribeInstancesRequest()).Reservations)
+                    reservations.Add(reservation);
 
                 var allSsmInstances = new List<InstanceInformation>();
                 string? nextToken = null;
 
-                do
+                try
                 {
-                    var request = new DescribeInstanceInformationRequest
+                    if (await CheckAccessAsync([new("ssm:DescribeInstanceInformation")])) do
                     {
-                        MaxResults = 50, // valeur max autorisée
-                        NextToken = nextToken
-                    };
-
-                    var response = await ssmClient.DescribeInstanceInformationAsync(request);
-
-                    if (response.InstanceInformationList != null)
-                        allSsmInstances.AddRange(response.InstanceInformationList);
-
-                    nextToken = response.NextToken;
+                        var response = await ssmClient.DescribeInstanceInformationAsync(new DescribeInstanceInformationRequest { MaxResults = 50, NextToken = nextToken });
+                        allSsmInstances.AddRange(response.InstanceInformationList ?? []);
+                        nextToken = response.NextToken;
+                    } while (!string.IsNullOrEmpty(nextToken));
                 }
-                while (!string.IsNullOrEmpty(nextToken));
-
-
-                foreach (var reservation in instancesResponse.Reservations)
+                catch (AmazonServiceException exception) when (exception.ErrorCode is "AccessDeniedException" or "AccessDenied")
                 {
-                    foreach (var instance in reservation.Instances)
+                    NotificationService.Publish("Inventaire SSM non autorise : disponibilite des connexions inconnue.");
+                }
+
+
+                foreach (var reservation in reservations)
+                {
+                    foreach (var instance in reservation.Instances ?? [])
                     {
                         var ssmInfo = allSsmInstances.FirstOrDefault(i => i.InstanceId == instance.InstanceId);
                         Instances.Add(new Ec2InstanceModel
                         {
                             InstanceId = instance.InstanceId,
-                            Name = instance.Tags.FirstOrDefault(t => t.Key == "Name")?.Value ?? "N/A",
+                            Name = instance.Tags?.FirstOrDefault(t => t.Key == "Name")?.Value ?? "N/A",
                             InstanceType = instance.InstanceType,
                             State = instance.State.Name,
                             PublicIp = instance.PublicIpAddress ?? "N/A",
@@ -129,25 +142,7 @@ namespace AwsManager.ViewModels
             }
             catch (Exception ex)
             {
-                if (ex.Message.Contains("SSO Token has expired"))
-                {
-                    MessageBox.Show(
-                        "Votre session AWS SSO a expiré.\nVous devez vous reconnecter.",
-                        "SSO expiré",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning
-                    );
-
-                    // Tentative de relancer la connexion SSO
-
-
-                    var profile = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "";
-                    await ReloginSsoAsync(profile);
-                }
-                else
-                {
-                    MessageBox.Show($"Failed to load EC2 instances: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                ReportError(ex);
             }
             finally
             {
@@ -155,31 +150,32 @@ namespace AwsManager.ViewModels
             }
         }
 
-        private async void StartInstance(object? parameter)
+        private async Task StartInstance(object? parameter)
         {
-            if (SelectedInstance == null) return;
+            var target = parameter as Ec2InstanceModel ?? SelectedInstance;
+            if (target == null) return;
 
             try
             {
                 IsLoading = true;
-                using var EC2Client = new AmazonEC2Client();
+                using var EC2Client = ClientFactory.CreateEc2Client();
 
                 var request = new StartInstancesRequest
                 {
-                    InstanceIds = [SelectedInstance.InstanceId]
+                    InstanceIds = [target.InstanceId]
                 };
 
 
                 await EC2Client.StartInstancesAsync(request);
 
-                MessageBox.Show($"DB instance {SelectedInstance.InstanceId} is starting...", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                NotificationService.Publish($"Demarrage demande : {target.InstanceId}.");
 
                 // Refresh the instances list to show updated status
                 await LoadInstancesAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to start DB instance {SelectedInstance.InstanceId}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ReportError(ex);
             }
             finally
             {
@@ -188,31 +184,32 @@ namespace AwsManager.ViewModels
 
         }
 
-        private async void StopInstance(object? parameter)
+        private async Task StopInstance(object? parameter)
         {
-            if (SelectedInstance == null) return;
+            var target = parameter as Ec2InstanceModel ?? SelectedInstance;
+            if (target == null || !Confirm($"Arreter l'instance {target.Name} ({target.InstanceId}) ?")) return;
 
             try
             {
                 IsLoading = true;
-                using var EC2Client = new AmazonEC2Client();
+                using var EC2Client = ClientFactory.CreateEc2Client();
 
                 var request = new StopInstancesRequest
                 {
-                    InstanceIds = [SelectedInstance.InstanceId]
+                    InstanceIds = [target.InstanceId]
                 };
 
 
                 await EC2Client.StopInstancesAsync(request);
 
-                MessageBox.Show($"DB instance {SelectedInstance.InstanceId} is stopping...", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                NotificationService.Publish($"Arret demande : {target.InstanceId}.");
 
                 // Refresh the instances list to show updated status
                 await LoadInstancesAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to stop DB instance {SelectedInstance.InstanceId}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ReportError(ex);
             }
             finally
             {
@@ -221,31 +218,32 @@ namespace AwsManager.ViewModels
 
         }
 
-        private async void TerminateInstance(object? parameter)
+        private async Task TerminateInstance(object? parameter)
         {
-            if (SelectedInstance == null) return;
+            var target = parameter as Ec2InstanceModel ?? SelectedInstance;
+            if (target == null || !Confirm($"SUPPRESSION DEFINITIVE de {target.Name} ({target.InstanceId}).\nLes volumes configures pour etre supprimes seront perdus. Continuer ?")) return;
 
             try
             {
                 IsLoading = true;
-                using var EC2Client = new AmazonEC2Client();
+                using var EC2Client = ClientFactory.CreateEc2Client();
 
                 var request = new TerminateInstancesRequest
                 {
-                    InstanceIds = [SelectedInstance.InstanceId]
+                    InstanceIds = [target.InstanceId]
                 };
 
 
                 await EC2Client.TerminateInstancesAsync(request);
 
-                MessageBox.Show($"DB instance {SelectedInstance.InstanceId} is Terminating...", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                NotificationService.Publish($"Suppression demandee : {target.InstanceId}.");
 
                 // Refresh the instances list to show updated status
                 await LoadInstancesAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to terminate DB instance {SelectedInstance.InstanceId}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ReportError(ex);
             }
             finally
             {
@@ -256,14 +254,11 @@ namespace AwsManager.ViewModels
 
         private void Disconnect(object? parameter)
         {
-            MessageBox.Show($"This action would stop All RDP Session", "Action: Stop", MessageBoxButton.OK, MessageBoxImage.Information);
-            foreach (Process process in Process.GetProcessesByName("session-manager-plugin"))
-                process.Kill();
-
-
+            NotificationService.Publish("Les connexions se ferment individuellement depuis Sessions.");
         }
         private void ViewDetails(object? parameter)
         {
+            SelectedInstance = parameter as Ec2InstanceModel ?? SelectedInstance;
             if (SelectedInstance == null) return;
 
             var detailsViewModel = new InstanceDetailsViewModel(SelectedInstance);
@@ -278,6 +273,7 @@ namespace AwsManager.ViewModels
 
         private void EditTags(object? parameter)
         {
+            SelectedInstance = parameter as Ec2InstanceModel ?? SelectedInstance;
             if (SelectedInstance == null) return;
 
             var tagEditorViewModel = new TagEditorViewModel(SelectedInstance.InstanceId);
@@ -287,7 +283,7 @@ namespace AwsManager.ViewModels
                 Owner = Application.Current.MainWindow
             };
 
-            tagEditorWindow.Show();
+            tagEditorWindow.ShowDialog();
             // After closing the dialog, refresh the main instance list in case the name tag was changed
             if (RefreshCommand.CanExecute(null))
             {
@@ -296,6 +292,7 @@ namespace AwsManager.ViewModels
         }
         private void Connect(object? parameter)
         {
+            SelectedInstance = parameter as Ec2InstanceModel ?? SelectedInstance;
             if (SelectedInstance == null) return;
 
             var connectionViewModel = new SsmConnectionViewModel(SelectedInstance);
@@ -307,64 +304,8 @@ namespace AwsManager.ViewModels
 
             connectionWindow.ShowDialog();
         }
-        private static async Task ReloginSsoAsync(string profileName)
-        {
-            try
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "aws",
-                    Arguments = $"sso login --profile {profileName}", 
-                    UseShellExecute = true
-                };
-
-                using var process = Process.Start(psi);
-                if (process != null)
-                {
-                    await process.WaitForExitAsync();
-                    MessageBox.Show(
-                        $"Connexion SSO réussie pour le profil '{profileName}'.",
-                        "Succès",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information
-                    );
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(
-                    $"Impossible de relancer la connexion SSO : {ex.Message}",
-                    "Erreur",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
-            }
-        }
 
     }
-    public class RelayCommand : ICommand
-    {
-        private readonly Action<object?> _execute;
-        private readonly Predicate<object?>? _canExecute;
 
-        public RelayCommand(Action<object?> execute, Predicate<object?>? canExecute = null)
-            => (_execute, _canExecute) = (execute ?? throw new ArgumentNullException(nameof(execute)), canExecute);
-
-        public bool CanExecute(object? parameter)
-        {
-            return _canExecute?.Invoke(parameter) ?? true;
-        }
-
-        public void Execute(object? parameter)
-        {
-            _execute(parameter);
-        }
-
-        public event EventHandler? CanExecuteChanged
-        {
-            add => CommandManager.RequerySuggested += value;
-            remove => CommandManager.RequerySuggested -= value;
-        }
-    }
 
 }

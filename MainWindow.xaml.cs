@@ -17,10 +17,23 @@ namespace AwsManager
     /// </summary>
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        public MainWindow() : this(new MainViewModel()) { }
+        public MainWindow(MainViewModel viewModel)
         {
             InitializeComponent();
-            DataContext = new MainViewModel();
+            DataContext = viewModel;
+            Closed += (_, _) => viewModel.Dispose();
+            Closing += (_, args) =>
+            {
+                var sessions = Services.SessionTrackingService.Instance.ActiveSessions.ToArray();
+                if (sessions.Length == 0) return;
+                if (!new Services.NotificationService().Confirm($"Fermer AWS Manager et ses {sessions.Length} connexion(s) SSM ?"))
+                {
+                    args.Cancel = true;
+                    return;
+                }
+                foreach (var session in sessions) Services.SessionTrackingService.Instance.KillSession(session);
+            };
         }
     }
 }

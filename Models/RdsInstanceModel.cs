@@ -3,6 +3,7 @@ namespace AwsManager.Models
     public class RdsInstanceModel
     {
         public string DbInstanceIdentifier { get; set; } = string.Empty;
+        public string ResourceArn { get; set; } = string.Empty;
         public string DbInstanceClass { get; set; } = string.Empty;
         public string Engine { get; set; } = string.Empty;
         public string DbInstanceStatus { get; set; } = string.Empty;

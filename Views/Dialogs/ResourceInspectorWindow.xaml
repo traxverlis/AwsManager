@@ -1,0 +1,65 @@
+<Window x:Class="AwsManager.Views.Dialogs.ResourceInspectorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:oxy="http://oxyplot.org/wpf"
+        Title="Ressource AWS" Width="980" Height="700" MinWidth="740" MinHeight="620" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource CanvasBrush}">
+    <Window.Resources><BooleanToVisibilityConverter x:Key="BoolVisibility"/></Window.Resources>
+    <Grid Margin="24">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <DockPanel>
+            <Button DockPanel.Dock="Right" Command="{Binding RefreshCommand}" ToolTip="Actualiser les données" Style="{StaticResource IconButton}"><materialDesign:PackIcon Kind="Refresh"/></Button>
+            <StackPanel>
+                <TextBlock Text="{Binding Resource.Name}" Style="{StaticResource SectionTitle}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Foreground="{StaticResource MutedInkBrush}"><Run Text="{Binding Resource.Service}"/> · <Run Text="{Binding Resource.Account}"/> · <Run Text="{Binding Resource.Region}"/></TextBlock>
+            </StackPanel>
+        </DockPanel>
+        <ProgressBar Grid.Row="1" Height="3" Margin="0,12,0,0" IsIndeterminate="True" Visibility="{Binding IsLoading, Converter={StaticResource BoolVisibility}}"/>
+        <TabControl Grid.Row="2" Margin="0,16,0,0" SelectedIndex="{Binding SelectedTab}" IsEnabled="{Binding IsIdle}">
+            <TabItem Header="Ressources liées">
+                <DataGrid ItemsSource="{Binding Related}" AutoGenerateColumns="False" IsReadOnly="True" Margin="0,16,0,0">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Width="60"><DataGridTemplateColumn.CellTemplate><DataTemplate>
+                            <Button Command="{Binding DataContext.OpenRelatedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Style="{StaticResource IconButton}" ToolTip="Ouvrir la ressource"><materialDesign:PackIcon Kind="ArrowTopRight"/></Button>
+                        </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Service" Binding="{Binding Service}" Width="180"/>
+                        <DataGridTextColumn Header="Ressource" Binding="{Binding Name}" Width="*" ElementStyle="{StaticResource ResourceName}"/>
+                        <DataGridTextColumn Header="Identifiant" Binding="{Binding Id}" Width="*" ElementStyle="{StaticResource ResourceIdentifier}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+            <TabItem Header="CloudWatch" Visibility="{Binding HasMonitoring, Converter={StaticResource BoolVisibility}}">
+                <Grid Margin="0,16,0,0">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="2*" MinHeight="140" MaxHeight="240"/><RowDefinition Height="Auto"/><RowDefinition Height="*" MinHeight="100"/></Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <TextBlock Text="Période (heures)" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <ComboBox ItemsSource="{Binding Periods}" SelectedItem="{Binding Hours}" Width="100"/>
+                    </StackPanel>
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Charts}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate><DataTemplate>
+                            <Grid Margin="0,0,12,0">
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                                <DockPanel><TextBlock Text="{Binding Summary}" DockPanel.Dock="Right" FontWeight="SemiBold"/><TextBlock Text="{Binding Name}" Foreground="{StaticResource MutedInkBrush}"/></DockPanel>
+                                <oxy:PlotView Grid.Row="1" Model="{Binding Plot}" Margin="0,8,0,8" Background="White"/>
+                            </Grid>
+                        </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Grid.Row="2" Text="{Binding AlarmStatus}" TextWrapping="Wrap" Margin="0,8,0,8"/>
+                    <DataGrid Grid.Row="3" ItemsSource="{Binding Alarms}" AutoGenerateColumns="False" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Alarme" Binding="{Binding Name}" Width="*" ElementStyle="{StaticResource ResourceName}"/>
+                            <DataGridTextColumn Header="État" Binding="{Binding State}" Width="160"/>
+                            <DataGridTextColumn Header="Mise à jour UTC" Binding="{Binding Updated, StringFormat={}{0:dd/MM HH:mm:ss}}" Width="170"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+        <DockPanel Grid.Row="3" Margin="0,12,0,0">
+            <Button DockPanel.Dock="Right" Content="Fermer" IsCancel="True" Style="{StaticResource ActionButton}"/>
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,16,0"/>
+        </DockPanel>
+    </Grid>
+</Window>

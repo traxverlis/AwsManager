@@ -11,5 +11,11 @@ namespace AwsManager.Views
         {
             InitializeComponent();
         }
+
+        private void OnSelectionChanged(object sender, SelectionChangedEventArgs args)
+        {
+            if (sender is DataGrid table && DataContext is ViewModels.S3ViewModel model)
+                model.SetSelection(table.SelectedItems.OfType<Models.S3ItemModel>());
+        }
     }
 }
