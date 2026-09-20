@@ -319,11 +319,14 @@ public class UiSmokeTests
                 var metricsClient = new Mock<Amazon.CloudWatch.IAmazonCloudWatch>();
                 var now = DateTime.UtcNow;
                 metricsClient.Setup(client => client.GetMetricDataAsync(It.IsAny<Amazon.CloudWatch.Model.GetMetricDataRequest>(), It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(new Amazon.CloudWatch.Model.GetMetricDataResponse { MetricDataResults =
+                    .ReturnsAsync(new Amazon.CloudWatch.Model.GetMetricDataResponse
+                    {
+                        MetricDataResults =
                     [
                         new() { Id = "cpu", StatusCode = Amazon.CloudWatch.StatusCode.Complete, Timestamps = Enumerable.Range(1, 12).Select(index => now.AddMinutes(-60 + index * 5)).ToList(), Values = [12, 20, 18, 35, 40, 30, 55, 42, 35, 60, 45, 32] },
                         new() { Id = "secondary", StatusCode = Amazon.CloudWatch.StatusCode.Complete, Timestamps = Enumerable.Range(1, 12).Select(index => now.AddMinutes(-60 + index * 5)).ToList(), Values = [1000000, 2000000, 1500000, 3000000, 2800000, 3500000, 2300000, 1800000, 2500000, 3200000, 2200000, 1200000] }
-                    ] });
+                    ]
+                    });
                 metricsClient.Setup(client => client.DescribeAlarmsAsync(It.IsAny<Amazon.CloudWatch.Model.DescribeAlarmsRequest>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new Amazon.CloudWatch.Model.DescribeAlarmsResponse { MetricAlarms = [new() { AlarmName = "cpu-application-demo", Namespace = "AWS/EC2", Dimensions = [new() { Name = "InstanceId", Value = resource.Id }], StateValue = Amazon.CloudWatch.StateValue.OK, StateUpdatedTimestamp = now }] });
                 var relationClient = new Mock<Amazon.EC2.IAmazonEC2>();
@@ -338,6 +341,7 @@ public class UiSmokeTests
                 Assert.AreEqual(2, inspector.Charts.Count);
                 Assert.AreEqual(1, inspector.Alarms.Count);
                 Assert.AreEqual(2, Descendants<OxyPlot.Wpf.PlotView>(inspectorWindow).Count());
+                Render(inspectorWindow, "readme-cloudwatch", 1100, 760);
                 Render(inspectorWindow, "cloudwatch-740", 740, 640);
                 var alarmTable = Descendants<DataGrid>(inspectorWindow).Single(table => ReferenceEquals(table.ItemsSource, inspector.Alarms));
                 var alarmRow = Descendants<DataGridRow>(alarmTable).First();
@@ -373,8 +377,11 @@ public class UiSmokeTests
                 logsClient.Setup(client => client.DescribeLogGroupsAsync(It.IsAny<Amazon.CloudWatchLogs.Model.DescribeLogGroupsRequest>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new Amazon.CloudWatchLogs.Model.DescribeLogGroupsResponse { LogGroups = [new() { LogGroupName = "/aws/rds/instance/database-demo/postgresql", RetentionInDays = 7 }, new() { LogGroupName = "/application/recette", RetentionInDays = 30 }] });
                 logsClient.Setup(client => client.FilterLogEventsAsync(It.IsAny<Amazon.CloudWatchLogs.Model.FilterLogEventsRequest>(), It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(new Amazon.CloudWatchLogs.Model.FilterLogEventsResponse { Events = Enumerable.Range(0, 8).Select(index => new Amazon.CloudWatchLogs.Model.FilteredLogEvent
-                    { EventId = index.ToString(), Timestamp = DateTimeOffset.UtcNow.AddMinutes(-index).ToUnixTimeMilliseconds(), LogStreamName = "database-demo.2026-09-18", Message = $"ERROR Test {index}\nDiagnostic de demonstration, sans donnees reelles.\nDetail multilignes du journal." }).ToList() });
+                    .ReturnsAsync(new Amazon.CloudWatchLogs.Model.FilterLogEventsResponse
+                    {
+                        Events = Enumerable.Range(0, 8).Select(index => new Amazon.CloudWatchLogs.Model.FilteredLogEvent
+                        { EventId = index.ToString(), Timestamp = DateTimeOffset.UtcNow.AddMinutes(-index).ToUnixTimeMilliseconds(), LogStreamName = "database-demo.2026-09-18", Message = $"ERROR Test {index}\nDiagnostic de demonstration, sans donnees reelles.\nDetail multilignes du journal." }).ToList()
+                    });
                 var logsFactory = new Mock<IAwsClientFactory>();
                 logsFactory.Setup(factory => factory.CreateCloudWatchLogsClient()).Returns(logsClient.Object);
                 using var logs = new CloudWatchLogsViewModel(logsFactory.Object);
@@ -398,10 +405,12 @@ public class UiSmokeTests
                 awaitOnDispatcher(logsWindow, async () => { await session.ConnectAsync("demo-sso", "eu-west-1", false); await logsMain.PermissionsReady; }, () => $"{logsMain.PermissionStatus}; appels={logsPermissions.Invocations.Count}");
                 var currentLogs = (CloudWatchLogsViewModel)logsMain.CurrentViewModel!;
                 currentLogs.SelectedGroup = currentLogs.Groups[0];
+                currentLogs.Pattern = "ERROR";
                 awaitOnDispatcher(logsWindow, () => currentLogs.SearchAsync());
                 currentLogs.SelectedEvent = currentLogs.Events[0];
                 var logsShell = new MainWindow(logsMain);
                 Render(logsShell, "logs-shell-compact", 1000, 640);
+                Render(logsShell, "readme-logs", 1440, 900);
                 logsMain.SelectedRegion = "us-east-1";
                 Assert.AreEqual(0, currentLogs.Events.Count);
                 Assert.IsNull(currentLogs.SelectedEvent);
@@ -577,6 +586,8 @@ public class UiSmokeTests
         var shell = new MainWindow(main);
         awaitOnDispatcher(shell, async () => { await session.ConnectAsync("demo-sso", "eu-west-1", false); await main.PermissionsReady; });
         Render(shell, "iam-shell-compact", 1000, 640);
+        Descendants<DataGrid>(shell).Single().SelectedItem = ((IamViewModel)main.CurrentViewModel!).Items[0];
+        Render(shell, "readme-iam", 1440, 900);
         main.SelectedPage = main.Pages.Single(page => page.Name == "Correctifs SSM");
         var activePatch = (PatchViewModel)main.CurrentViewModel!;
         Render(shell, "correctifs-shell-compact", 1000, 640);
@@ -596,7 +607,15 @@ public class UiSmokeTests
             .ReturnsAsync(new Amazon.IdentityManagement.Model.ListUsersResponse { Users = [new() { UserName = "lecture-demo", Arn = "arn:aws:iam::000000000000:user/lecture-demo", Path = "/" }] });
         var ec2 = new Mock<Amazon.EC2.AmazonEC2Client>(new Amazon.Runtime.AnonymousAWSCredentials(), Amazon.RegionEndpoint.EUWest1) { CallBase = true };
         ec2.Setup(client => client.DescribeInstancesAsync(It.IsAny<Amazon.EC2.Model.DescribeInstancesRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Amazon.EC2.Model.DescribeInstancesResponse { Reservations = [new() { Instances = [new() { InstanceId = "i-0123456789abcdef0", State = new() { Name = "running" }, Tags = [new("Name", "lecture-seule-demo")] }] }] });
+            .ReturnsAsync(new Amazon.EC2.Model.DescribeInstancesResponse
+            {
+                Reservations = [new() { Instances =
+            [
+                new() { InstanceId = "i-0123456789abcdef0", InstanceType = "t3.medium", State = new() { Name = "running" }, Tags = [new("Name", "application-demo")], PrivateIpAddress = "10.0.1.10", PublicIpAddress = "192.0.2.10", PlatformDetails = "Linux/UNIX", SecurityGroups = [new() { GroupId = "sg-0123456789abcdef0", GroupName = "web-demo" }] },
+                new() { InstanceId = "i-0123456789abcdef1", InstanceType = "t3.small", State = new() { Name = "stopped" }, Tags = [new("Name", "worker-demo")], PrivateIpAddress = "10.0.2.20", PlatformDetails = "Linux/UNIX", SecurityGroups = [new() { GroupId = "sg-0123456789abcdef1", GroupName = "workers-demo" }] },
+                new() { InstanceId = "i-0123456789abcdef2", InstanceType = "t3.large", State = new() { Name = "pending" }, Tags = [new("Name", "batch-demo")], PrivateIpAddress = "10.0.2.30", PlatformDetails = "Windows", SecurityGroups = [new() { GroupId = "sg-0123456789abcdef1", GroupName = "workers-demo" }] }
+            ] }]
+            });
         var ssm = new Mock<Amazon.SimpleSystemsManagement.IAmazonSimpleSystemsManagement>();
         ssm.Setup(client => client.DescribeInstanceInformationAsync(It.IsAny<Amazon.SimpleSystemsManagement.Model.DescribeInstanceInformationRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Amazon.SimpleSystemsManagement.Model.DescribeInstanceInformationResponse { InstanceInformationList = [] });
@@ -607,11 +626,12 @@ public class UiSmokeTests
         var shell = new MainWindow(main);
         awaitOnDispatcher(shell, async () => { await session.ConnectAsync("demo-sso", "eu-west-1", false); await main.PermissionsReady; });
         var model = (Ec2ViewModel)main.CurrentViewModel!;
-        model.SelectedInstance = model.Instances.Single();
+        model.SelectedInstance = model.Instances.Single(instance => instance.InstanceId == "i-0123456789abcdef0");
         var gate = PermissionGate.For(session.Context)!;
         awaitOnDispatcher(shell, () => gate.CheckAsync([new("ec2:StopInstances", "arn:aws:ec2:eu-west-1:000000000000:instance/i-0123456789abcdef0")]));
         Render(shell, "permissions-lecture-ec2", 1000, 640);
         Assert.IsTrue(Descendants<Button>(shell).Where(button => ReferenceEquals(button.Command, model.StopInstanceCommand)).All(button => !button.IsEnabled));
+        Render(shell, "readme-ec2", 1440, 900);
         var navigation = Descendants<ListBox>(shell).Single(list => ReferenceEquals(list.ItemsSource, main.Pages));
         foreach (var page in main.Pages)
         {

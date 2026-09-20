@@ -4,6 +4,43 @@ Application Windows WPF pour EC2, S3, RDS, Auto Scaling, groupes de securite,
 Route 53, IAM, correctifs SSM, CloudWatch Logs et connexions SSM.
 Cible : .NET 10 LTS, AWS SDK .NET v4.
 
+## Apercu
+
+Captures de l'interface reelle, generees hors ligne avec des donnees entierement
+fictives. Aucun compte AWS reel ni identifiant personnel n'est utilise.
+
+**Journaux CloudWatch** : recherche, filtrage et consultation des messages complets.
+
+![Journaux CloudWatch et detail d'un evenement de demonstration](docs/screenshots/logs.png)
+
+<details>
+<summary>EC2 : inventaire et autorisations IAM</summary>
+
+Instances, etats et informations reseau. Dans cet exemple, les autorisations IAM
+limitent les actions disponibles a la consultation.
+
+![Inventaire EC2 avec trois instances fictives et actions restreintes](docs/screenshots/ec2.png)
+
+</details>
+
+<details>
+<summary>CloudWatch : metriques et alarmes</summary>
+
+Courbes CPU et reseau d'une instance, avec ses alarmes CloudWatch.
+
+![Supervision CloudWatch avec metriques CPU, reseau et alarme fictives](docs/screenshots/cloudwatch.png)
+
+</details>
+
+<details>
+<summary>IAM : roles et relations de confiance</summary>
+
+Consultation des roles, profils EC2, politiques, utilisateurs et groupes.
+
+![Role IAM fictif et detail de sa relation de confiance](docs/screenshots/iam.png)
+
+</details>
+
 ## Demarrage
 
 - Windows avec AWS CLI v2 et des profils locaux configures. Les profils SSO
