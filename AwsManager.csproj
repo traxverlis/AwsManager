@@ -33,14 +33,14 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.Core" Version="4.0.102.6" />
-    <PackageReference Include="AWSSDK.CloudWatch" Version="4.0.104.4" />
+    <PackageReference Include="AWSSDK.Core" Version="4.0.102.7" />
+    <PackageReference Include="AWSSDK.CloudWatch" Version="4.0.105" />
     <PackageReference Include="AWSSDK.CloudWatchLogs" Version="4.0.104.3" />
     <PackageReference Include="AWSSDK.IdentityManagement" Version="4.0.103.6" />
     <PackageReference Include="OxyPlot.Wpf" Version="2.2.0" />
-    <PackageReference Include="AWSSDK.EC2" Version="4.0.123" />
+    <PackageReference Include="AWSSDK.EC2" Version="4.0.124" />
     <PackageReference Include="AWSSDK.Route53" Version="4.0.100.14" />
-    <PackageReference Include="AWSSDK.S3" Version="4.0.103.3" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.103.4" />
 
     <PackageReference Include="AWSSDK.RDS" Version="4.0.105.3" />
     <PackageReference Include="AWSSDK.AutoScaling" Version="4.0.104.3" />
