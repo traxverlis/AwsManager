@@ -52,7 +52,7 @@
     <PackageReference Include="AWSSDK.SSOOIDC" Version="4.0.100.15">
       <TreatAsUsed>true</TreatAsUsed>
     </PackageReference>
-    <PackageReference Include="MaterialDesignThemes" Version="5.3.2">
+    <PackageReference Include="MaterialDesignThemes" Version="5.4.0">
       <TreatAsUsed>true</TreatAsUsed>
     </PackageReference>
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
